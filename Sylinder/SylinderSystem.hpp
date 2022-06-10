@@ -331,9 +331,11 @@ class SylinderSystem {
 
     /**
      * @brief resolve collision with given nonBrownian motion and advance the system configuration
+     * 
+     * @param count_flag: add count step to index
      *
      */
-    void runStep();
+    void runStep(bool count_flag=true);
 
     // These should run after runStep()
     /**

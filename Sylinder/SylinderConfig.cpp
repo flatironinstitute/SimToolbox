@@ -52,6 +52,9 @@ SylinderConfig::SylinderConfig(std::string filename) {
     initPreSteps = 100;
     readConfig(config, VARNAME(initPreSteps), initPreSteps, "", true);
 
+    thermEquilTime = 0;
+    readConfig(config, VARNAME(thermEquilTime), thermEquilTime, "", true);
+
     linkKappa = 100;
     linkGap = 0.01;
     readConfig(config, VARNAME(linkKappa), linkKappa, "", true);

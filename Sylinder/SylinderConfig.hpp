@@ -37,7 +37,8 @@ class SylinderConfig {
     double initBoxLow[3];       ///< initialize sylinders within this box
     double initOrient[3];       ///< initial orientation for each sylinder. >1 <-1 means random
     bool initCircularX = false; ///< set the initial cross-section as a circle in the yz-plane
-    int initPreSteps = 100; ///< number of initial pre steps to resolve potential collisions
+    int initPreSteps = 100;     ///< number of initial pre steps to resolve potential collisions
+    double thermEquilTime = 0;  ///< Time to equilibrate system before running crosslinking steps
 
     // physical constant
     double viscosity; ///< unit pN/(um^2 s), water ~ 0.0009
