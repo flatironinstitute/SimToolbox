@@ -103,7 +103,8 @@ void SylinderSystem::initialize(const SylinderConfig &runConfig_, const std::str
     spdlog::warn("SylinderSystem Initialized. {} local sylinders", sylinderContainer.getNumberOfParticleLocal());
 }
 
-void SylinderSystem::reinitialize(const SylinderConfig &runConfig_, const std::string &restartFile, int argc, char **argv, bool eulerStep) {
+void SylinderSystem::reinitialize(const SylinderConfig &runConfig_, const std::string &restartFile, int argc,
+                                  char **argv, bool eulerStep) {
     runConfig = runConfig_;
 
     // Read the timestep information and pvtp filenames from restartFile
@@ -206,7 +207,8 @@ void SylinderSystem::getOrient(Equatn &orient, const double px, const double py,
 
     // px,py,pz all random, pick uniformly in orientation space
     if (px != pvec[0] && py != pvec[1] && pz != pvec[2]) {
-        EquatnHelper::setUnitRandomEquatn(orient, rngPoolPtr->getU01(threadId), rngPoolPtr->getU01(threadId), rngPoolPtr->getU01(threadId));
+        EquatnHelper::setUnitRandomEquatn(orient, rngPoolPtr->getU01(threadId), rngPoolPtr->getU01(threadId),
+                                          rngPoolPtr->getU01(threadId));
         return;
     } else {
         orient = Equatn::FromTwoVectors(Evec3(0, 0, 1), pvec);
@@ -222,7 +224,8 @@ void SylinderSystem::setInitialFromConfig() {
     if (commRcp->getRank() != 0) {
         sylinderContainer.setNumberOfParticleLocal(0);
     } else {
-        const double boxEdge[3] = {runConfig.initBoxHigh[0] - runConfig.initBoxLow[0], runConfig.initBoxHigh[1] - runConfig.initBoxLow[1],
+        const double boxEdge[3] = {runConfig.initBoxHigh[0] - runConfig.initBoxLow[0],
+                                   runConfig.initBoxHigh[1] - runConfig.initBoxLow[1],
                                    runConfig.initBoxHigh[2] - runConfig.initBoxLow[2]};
         const double minBoxEdge = std::min(std::min(boxEdge[0], boxEdge[1]), boxEdge[2]);
         const double maxLength = minBoxEdge * 0.5;
@@ -269,7 +272,8 @@ void SylinderSystem::setInitialCircularCrossSection() {
     // x axis
     centerCrossSec = Evec3(0, (runConfig.initBoxHigh[1] - runConfig.initBoxLow[1]) * 0.5 + runConfig.initBoxLow[1],
                            (runConfig.initBoxHigh[2] - runConfig.initBoxLow[2]) * 0.5 + runConfig.initBoxLow[2]);
-    radiusCrossSec = 0.5 * std::min(runConfig.initBoxHigh[2] - runConfig.initBoxLow[2], runConfig.initBoxHigh[1] - runConfig.initBoxLow[1]);
+    radiusCrossSec = 0.5 * std::min(runConfig.initBoxHigh[2] - runConfig.initBoxLow[2],
+                                    runConfig.initBoxHigh[1] - runConfig.initBoxLow[1]);
 #pragma omp parallel
     {
         const int threadId = omp_get_thread_num();
@@ -300,7 +304,8 @@ void SylinderSystem::calcVolFrac() {
     Teuchos::reduceAll(*commRcp, Teuchos::SumValueReductionOp<int, double>(), 1, &volLocal, &volGlobal);
 
     // step 2, reduce to root and compute total volume
-    double boxVolume = (runConfig.simBoxHigh[0] - runConfig.simBoxLow[0]) * (runConfig.simBoxHigh[1] - runConfig.simBoxLow[1]) *
+    double boxVolume = (runConfig.simBoxHigh[0] - runConfig.simBoxLow[0]) *
+                       (runConfig.simBoxHigh[1] - runConfig.simBoxLow[1]) *
                        (runConfig.simBoxHigh[2] - runConfig.simBoxLow[2]);
     spdlog::warn("Volume Sylinder = {:g}", volGlobal);
     spdlog::warn("Volume fraction = {:g}", volGlobal / boxVolume);
@@ -416,7 +421,8 @@ void SylinderSystem::setInitialFromVTKFile(const std::string &pvtpFileName) {
         vtkSmartPointer<vtkPoints> posData = polydata->GetPoints();
         // Extract the point/cell data
         // int32 types
-        vtkSmartPointer<vtkTypeInt32Array> gidData = vtkArrayDownCast<vtkTypeInt32Array>(polydata->GetCellData()->GetAbstractArray("gid"));
+        vtkSmartPointer<vtkTypeInt32Array> gidData =
+            vtkArrayDownCast<vtkTypeInt32Array>(polydata->GetCellData()->GetAbstractArray("gid"));
         vtkSmartPointer<vtkTypeInt32Array> groupData =
             vtkArrayDownCast<vtkTypeInt32Array>(polydata->GetCellData()->GetAbstractArray("group"));
         // unsigned char type
@@ -451,7 +457,8 @@ void SylinderSystem::setInitialFromVTKFile(const std::string &pvtpFileName) {
             sy.lengthCollision = lengthCollisionData->GetComponent(i, 0);
             sy.radius = radiusData->GetComponent(i, 0);
             sy.radiusCollision = radiusCollisionData->GetComponent(i, 0);
-            const Evec3 direction(znormData->GetComponent(i, 0), znormData->GetComponent(i, 1), znormData->GetComponent(i, 2));
+            const Evec3 direction(znormData->GetComponent(i, 0), znormData->GetComponent(i, 1),
+                                  znormData->GetComponent(i, 2));
             Emapq(sy.orientation) = Equatn::FromTwoVectors(Evec3(0, 0, 1), direction);
             sy.vel[0] = velData->GetComponent(i, 0);
             sy.vel[1] = velData->GetComponent(i, 1);
@@ -474,7 +481,8 @@ std::string SylinderSystem::getResultFolderWithID(int snapID_) {
     const int num = std::max(400 / commRcp->getSize(), 1); // limit max number of files per folder
     int k = snapID_ / num;
     int low = k * num, high = k * num + num - 1;
-    std::string baseFolder = "./result/result" + std::to_string(low) + std::string("-") + std::to_string(high) + std::string("/");
+    std::string baseFolder =
+        "./result/result" + std::to_string(low) + std::string("-") + std::to_string(high) + std::string("/");
     return baseFolder;
 }
 
@@ -515,8 +523,8 @@ void SylinderSystem::writeTimeStepInfo(const std::string &baseFolder) {
 void SylinderSystem::writeVTK(const std::string &baseFolder) {
     const int rank = commRcp->getRank();
     const int size = commRcp->getSize();
-    Sylinder::writeVTP<PS::ParticleSystem<Sylinder>>(sylinderContainer, sylinderContainer.getNumberOfParticleLocal(), baseFolder,
-                                                     std::to_string(snapID), rank);
+    Sylinder::writeVTP<PS::ParticleSystem<Sylinder>>(sylinderContainer, sylinderContainer.getNumberOfParticleLocal(),
+                                                     baseFolder, std::to_string(snapID), rank);
     conCollectorPtr->writeVTP(baseFolder, "", std::to_string(snapID), rank);
     if (rank == 0) {
         Sylinder::writePVTP(baseFolder, std::to_string(snapID), size); // write parallel head
@@ -701,7 +709,8 @@ void SylinderSystem::calcMobMatrix() {
     }
 
     // mobMat is block-diagonal, so domainMap=rangeMap
-    mobilityMatrixRcp = Teuchos::rcp(new TCMAT(sylinderMobilityMapRcp, sylinderMobilityMapRcp, rowPointers, columnIndices, values));
+    mobilityMatrixRcp =
+        Teuchos::rcp(new TCMAT(sylinderMobilityMapRcp, sylinderMobilityMapRcp, rowPointers, columnIndices, values));
     mobilityMatrixRcp->fillComplete(sylinderMobilityMapRcp, sylinderMobilityMapRcp); // domainMap, rangeMap
 
     spdlog::debug("MobMat Constructed " + mobilityMatrixRcp->description());
@@ -819,7 +828,8 @@ void SylinderSystem::stepEuler() {
 
 void SylinderSystem::resolveConstraints() {
 
-    Teuchos::RCP<Teuchos::Time> collectColTimer = Teuchos::TimeMonitor::getNewCounter("SylinderSystem::CollectCollision");
+    Teuchos::RCP<Teuchos::Time> collectColTimer =
+        Teuchos::TimeMonitor::getNewCounter("SylinderSystem::CollectCollision");
     Teuchos::RCP<Teuchos::Time> collectLinkTimer = Teuchos::TimeMonitor::getNewCounter("SylinderSystem::CollectLink");
 
     spdlog::debug("start collect collisions");
@@ -869,7 +879,9 @@ void SylinderSystem::updateSylinderMap() {
     }
 }
 
-bool SylinderSystem::getIfWriteResultCurrentStep() { return (stepCount % static_cast<int>(runConfig.timeSnap / runConfig.dt) == 0); }
+bool SylinderSystem::getIfWriteResultCurrentStep() {
+    return (stepCount % static_cast<int>(runConfig.timeSnap / runConfig.dt) == 0);
+}
 
 void SylinderSystem::prepareStep() {
     spdlog::warn("CurrentStep {}", stepCount);
@@ -1108,11 +1120,14 @@ void SylinderSystem::collectBoundaryCollision() {
                     Evec3 posI = Query - center;
 
                     if ((Query - ECmap3(Proj)).dot(ECmap3(delta)) < 0) { // outside boundary
-                        que.emplace_back(-deltanorm - radius, 0, sy.gid, sy.gid, sy.globalIndex, sy.globalIndex, norm.data(), norm.data(),
-                                         posI.data(), posI.data(), Query.data(), Proj, true, false, 0.0, 0.0);
-                    } else if (deltanorm < (1 + runConfig.sylinderColBuf * 2) * sy.radiusCollision) { // inside boundary but close
-                        que.emplace_back(deltanorm - radius, 0, sy.gid, sy.gid, sy.globalIndex, sy.globalIndex, norm.data(), norm.data(),
-                                         posI.data(), posI.data(), Query.data(), Proj, true, false, 0.0, 0.0);
+                        que.emplace_back(-deltanorm - radius, 0, sy.gid, sy.gid, sy.globalIndex, sy.globalIndex,
+                                         norm.data(), norm.data(), posI.data(), posI.data(), Query.data(), Proj, true,
+                                         false, 0.0, 0.0);
+                    } else if (deltanorm <
+                               (1 + runConfig.sylinderColBuf * 2) * sy.radiusCollision) { // inside boundary but close
+                        que.emplace_back(deltanorm - radius, 0, sy.gid, sy.gid, sy.globalIndex, sy.globalIndex,
+                                         norm.data(), norm.data(), posI.data(), posI.data(), Query.data(), Proj, true,
+                                         false, 0.0, 0.0);
                     }
                 };
 
@@ -1158,7 +1173,8 @@ std::pair<int, int> SylinderSystem::getMaxGid() {
     return std::pair<int, int>(maxGidLocal, maxGidGlobal);
 }
 
-void SylinderSystem::calcBoundingBox(double localLow[3], double localHigh[3], double globalLow[3], double globalHigh[3]) {
+void SylinderSystem::calcBoundingBox(double localLow[3], double localHigh[3], double globalLow[3],
+                                     double globalHigh[3]) {
     const int nLocal = sylinderContainer.getNumberOfParticleLocal();
     double lx, ly, lz;
     lx = ly = lz = std::numeric_limits<double>::max();
@@ -1342,8 +1358,8 @@ void SylinderSystem::addNewLink(const std::vector<Link> &newLink) {
     std::vector<int> displ(commRcp->getSize() + 1, 0);
     std::partial_sum(newCount.cbegin(), newCount.cend(), displ.begin() + 1);
     std::vector<Link> newLinkRecv(displ.back());
-    MPI_Allgatherv(newLink.data(), newCountLocal, createMPIStructType<Link>(), newLinkRecv.data(), newCount.data(), displ.data(),
-                   createMPIStructType<Link>(), MPI_COMM_WORLD);
+    MPI_Allgatherv(newLink.data(), newCountLocal, createMPIStructType<Link>(), newLinkRecv.data(), newCount.data(),
+                   displ.data(), createMPIStructType<Link>(), MPI_COMM_WORLD);
 
     // put newLinks into the map, same op on all mpi ranks
     for (const auto &ll : newLinkRecv) {
@@ -1452,12 +1468,12 @@ void SylinderSystem::collectLinkBilateral() {
                                          syI.globalIndex,            //
                                          syJ.globalIndex,            //
                                          normI.data(), normJ.data(), // direction of collision force
-                                         posI.data(), posJ.data(),   // location of collision relative to particle center
-                                         Ploc.data(), Qloc.data(),   // location of collision in lab frame
+                                         posI.data(), posJ.data(), // location of collision relative to particle center
+                                         Ploc.data(), Qloc.data(), // location of collision in lab frame
                                          false, true, runConfig.linkKappa, 0.0);
                 Emat3 stressIJ;
-                CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length, syI.radius,
-                                                     syJ.radius, 1.0, Ploc, Qloc, stressIJ);
+                CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
+                                                     syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
                 conBlock.setStress(stressIJ);
                 conQue.push_back(conBlock);
             }
