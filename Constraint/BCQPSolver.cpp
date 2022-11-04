@@ -493,7 +493,7 @@ double BCQPSolver::checkProjectionResidual(const Teuchos::RCP<const TV> &XRcp, c
         std::exit(1);
     }
 
-    return QRcp->norm2();
+    return QRcp->normInf();
 }
 
 void BCQPSolver::setDefaultBounds() {

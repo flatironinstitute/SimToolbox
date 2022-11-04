@@ -106,7 +106,10 @@ struct SylinderNearEP {
      * @return PS::F64
      */
     PS::F64 getRSearch() const {
-        return std::max(length + 2 * radius, lengthCollision + 2 * lengthCollision) * (1 + colBuf);
+        // return std::max(length + 2 * radius, lengthCollision + 2 * lengthCollision) * (1 + colBuf);
+        const double boundingSphereRad = .5* std::max(length + 2. * radius, lengthCollision + 2.*radiusCollision);
+        const double searchRadius = boundingSphereRad + colBuf;
+        return searchRadius;
     }
 
     /**
@@ -263,7 +266,8 @@ class CalcSylinderNearForce {
 
         const double sep = rnorm - (radI + radJ); // goal of constraint is sep >=0
 
-        if (sep < (radI * spI.colBuf + radJ * spJ.colBuf)) {
+        const double buffer = std::max(spI.colBuf, spJ.colBuf);
+        if (sep < buffer) {
             const Evec3 &Ploc = centerI;
             const Evec3 &Qloc = centerJ;
             collision = true;
@@ -322,7 +326,8 @@ class CalcSylinderNearForce {
 
         const double sep = distMin - (radI + syJ.radiusCollision); // goal of constraint is sep >=0
 
-        if (sep < (radI * spI.colBuf + syJ.radiusCollision * syJ.colBuf)) {
+        const double buffer = std::max(spI.colBuf, syJ.colBuf);
+        if (sep < buffer) {
             collision = true;
             const double delta0 = sep;
             const double gamma = sep < 0 ? -sep : 0;
@@ -383,7 +388,8 @@ class CalcSylinderNearForce {
 
         const double sep = distMin - (syI.radiusCollision + syJ.radiusCollision); // goal of constraint is sep >=0
 
-        if (sep < (syI.radiusCollision * syI.colBuf + syJ.radiusCollision * syJ.colBuf)) {
+        const double buffer = std::max(syI.colBuf, syJ.colBuf);
+        if (sep < buffer) {
             collision = true;
             const double delta0 = sep;
             const double gamma = sep < 0 ? -sep : 0;
