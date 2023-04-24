@@ -65,7 +65,8 @@ void ConstraintSolver::solveConstraints() {
 
     // the bound of BCQP. 0 for gammau, unbound for gammab.
     Teuchos::RCP<TV> lbRcp = solver.getLowerBound();
-    lbRcp->scale(-std::numeric_limits<double>::max() / 10, *biFlagRcp); // 0 if biFlag=0, -infty if biFlag=1
+
+    lbRcp->scale(-std::numeric_limits<double>::max() * .1, *biFlagRcp); // 0 if biFlag=0, -inf if biFlag=1
     spdlog::debug("bound constructed");
 
     // solve
