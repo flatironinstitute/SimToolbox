@@ -330,7 +330,21 @@ void SylinderSystem::setInitialFromFile(const std::string &filename) {
         Emap3(sy.pos) = Evec3((mx + px), (my + py), (mz + pz)) * 0.5;
         sy.gid = gid;
         sy.group = group;
-        sy.isImmovable = (type == 'S') ? true : false;
+        switch (type)
+        {
+        case 'A':
+            sy.isAnchor = true;
+            sy.isImmovable = true;
+            break;
+        case 'S':
+            sy.isAnchor = false;
+            sy.isImmovable = true;
+            break;
+        
+        default:
+            break;
+        }
+        
         sy.radius = radius;
         sy.radiusCollision = radius;
         sy.length = sqrt(pow(px - mx, 2) + pow(py - my, 2) + pow(pz - mz, 2));
@@ -353,7 +367,7 @@ void SylinderSystem::setInitialFromFile(const std::string &filename) {
 
         std::deque<Sylinder> sylinderReadFromFile;
         while (std::getline(myfile, line)) {
-            if (line[0] == 'C' || line[0] == 'S') {
+            if (line[0] == 'C' || line[0] == 'S' || line[0] == 'A') {
                 Sylinder sy;
                 parseSylinder(sy, line);
                 sylinderReadFromFile.push_back(sy);
@@ -428,6 +442,8 @@ void SylinderSystem::setInitialFromVTKFile(const std::string &pvtpFileName) {
         // unsigned char type
         vtkSmartPointer<vtkTypeUInt8Array> isImmovableData =
             vtkArrayDownCast<vtkTypeUInt8Array>(polydata->GetCellData()->GetAbstractArray("isImmovable"));
+        vtkSmartPointer<vtkTypeUInt8Array> isAnchorData =
+            vtkArrayDownCast<vtkTypeUInt8Array>(polydata->GetCellData()->GetAbstractArray("isAnchor"));
         // float/double types
         vtkSmartPointer<vtkDataArray> lengthData = polydata->GetCellData()->GetArray("length");
         vtkSmartPointer<vtkDataArray> lengthCollisionData = polydata->GetCellData()->GetArray("lengthCollision");
@@ -453,6 +469,7 @@ void SylinderSystem::setInitialFromVTKFile(const std::string &pvtpFileName) {
             sy.gid = gidData->GetComponent(i, 0);
             sy.group = groupData->GetComponent(i, 0);
             sy.isImmovable = isImmovableData->GetTypedComponent(i, 0) > 0 ? true : false;
+            sy.isAnchor = isAnchorData->GetTypedComponent(i, 0) > 0 ? true : false;
             sy.length = lengthData->GetComponent(i, 0);
             sy.lengthCollision = lengthCollisionData->GetComponent(i, 0);
             sy.radius = radiusData->GetComponent(i, 0);
@@ -898,10 +915,11 @@ void SylinderSystem::prepareStep() {
     for (int i = 0; i < nLocal; i++) {
         auto &sy = sylinderContainer[i];
         sy.clear();
-        sy.radiusCollision = sylinderContainer[i].radius * runConfig.sylinderDiameterColRatio;
-        sy.lengthCollision = sylinderContainer[i].length * runConfig.sylinderLengthColRatio;
+        // Anchors do not interact so set all collision parameters to zero
+        sy.radiusCollision = sylinderContainer[i].radius * runConfig.sylinderDiameterColRatio * (sy.isAnchor ? 0. : 1.);
+        sy.lengthCollision = sylinderContainer[i].length * runConfig.sylinderLengthColRatio * (sy.isAnchor ? 0. : 1.);
         sy.rank = commRcp->getRank();
-        sy.colBuf = runConfig.sylinderColBuf;
+        sy.colBuf = runConfig.sylinderColBuf * (sy.isAnchor ? 0. : 1.); 
     }
 
     if (runConfig.monolayer) {

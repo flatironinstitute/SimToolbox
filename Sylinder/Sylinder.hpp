@@ -43,6 +43,8 @@ class Sylinder {
     int group = -1;                      ///< a 'marker'
 
     bool isImmovable = false; ///< flag for if Sylinder can move
+    bool isAnchor = false; ///< flag for if Sylinder is an anchor 
+                          ///< (i.e. does not interact with other Sylinders besides through permanent spring forces)
 
     double radius;          ///< radius
     double radiusCollision; ///< radius for collision resolution
@@ -225,6 +227,7 @@ class Sylinder {
         cellDataFields.emplace_back(1, IOHelper::IOTYPE::Int32, "gid");
         cellDataFields.emplace_back(1, IOHelper::IOTYPE::Int32, "group");
         cellDataFields.emplace_back(1, IOHelper::IOTYPE::UInt8, "isImmovable");
+        cellDataFields.emplace_back(1, IOHelper::IOTYPE::UInt8, "isAnchor");
 
         cellDataFields.emplace_back(1, IOHelper::IOTYPE::Float32, "radius");
         cellDataFields.emplace_back(1, IOHelper::IOTYPE::Float32, "radiusCollision");
@@ -299,6 +302,7 @@ class Sylinder {
         std::vector<int32_t> gid(sylinderNumber);
         std::vector<int32_t> group(sylinderNumber);
         std::vector<uint8_t> isImmovable(sylinderNumber);
+        std::vector<uint8_t> isAnchor(sylinderNumber);
         std::vector<float> radius(sylinderNumber);
         std::vector<float> radiusCollision(sylinderNumber);
         std::vector<float> length(sylinderNumber);
@@ -357,6 +361,7 @@ class Sylinder {
             gid[i] = sy.gid;
             group[i] = sy.group;
             isImmovable[i] = sy.isImmovable ? 1 : 0;
+            isAnchor[i] = sy.isAnchor ? 1 : 0;
 
             radius[i] = sy.radius;
             radiusCollision[i] = sy.radiusCollision;
@@ -417,6 +422,7 @@ class Sylinder {
         IOHelper::writeDataArrayBase64(gid, "gid", 1, file);
         IOHelper::writeDataArrayBase64(group, "group", 1, file);
         IOHelper::writeDataArrayBase64(isImmovable, "isImmovable", 1, file);
+        IOHelper::writeDataArrayBase64(isAnchor, "isAnchor", 1, file);
         IOHelper::writeDataArrayBase64(radius, "radius", 1, file);
         IOHelper::writeDataArrayBase64(radiusCollision, "radiusCollision", 1, file);
         IOHelper::writeDataArrayBase64(length, "length", 1, file);
