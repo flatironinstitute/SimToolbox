@@ -349,7 +349,7 @@ void SylinderSystem::setInitialFromFile(const std::string &filename) {
         double px, py, pz;
         int group = -1;
 
-        # Read in a single sylinder from the line 
+        // Read in a single sylinder from the line 
         liness >> type >> dummy 
                >> gid >> dummy 
                >> radius >> dummy 

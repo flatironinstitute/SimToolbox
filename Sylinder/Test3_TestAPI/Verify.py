@@ -12,8 +12,8 @@ import copy
 file = open('RunConfig.yaml')
 config = yaml.load(file, Loader=yaml.FullLoader)
 file.close()
-print(config['linkKappa'])
-linkKappa = config['linkKappa']
+print(config['endLinkKappa'])
+linkKappa = config['endLinkKappa']
 
 
 class ConBlock(object):

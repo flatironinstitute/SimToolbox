@@ -169,6 +169,7 @@ class CalcSylinderNearForce {
 
   public:
     std::shared_ptr<ConstraintBlockPool> conPoolPtr; ///< shared object for collecting collision constraints
+    std::unordered_multimap<int, int> pairsToIgnore;
 
     /**
      * @brief Construct a new CalcSylinderNearForce object

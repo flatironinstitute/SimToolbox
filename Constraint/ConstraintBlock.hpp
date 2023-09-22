@@ -31,7 +31,6 @@ struct ConstraintBlock {
   public:
     double delta0 = 0;                    ///< constraint initial value
     double gamma = 0;                     ///< force magnitude, could be an initial guess
-    double gammaLB = 0;                   ///< lower bound of gamma for unilateral constraints
     int gidI = GEO_INVALID_INDEX;         ///< unique global ID of particle I
     int gidJ = GEO_INVALID_INDEX;         ///< unique global ID of particle J
     int gidK = GEO_INVALID_INDEX;         ///< unique global ID of particle K

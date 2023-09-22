@@ -84,6 +84,9 @@ class SylinderSystem {
     // Data directory
     std::shared_ptr<ZDD<SylinderNearEP>> sylinderNearDataDirectoryPtr; ///< distributed data directory for sylinder data
 
+    void applyForceTo(std::vector<double> forces, std::vector<int> gids);
+
+
     // internal utility functions
     /**
      * @brief generate initial configuration on rank 0 according to runConfig

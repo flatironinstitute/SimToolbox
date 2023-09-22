@@ -24,6 +24,11 @@ endif()
 find_package(TRNG REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
+message("   YAML_CPP_INCLUDE_DIRS = ${YAML_CPP_INCLUDE_DIR}")
+message("   YAML_CPP_LIBRARY_DIR = ${YAML_CPP_LIBRARY_DIR}")
+message("   YAML_CPP_LIBRARIES = ${YAML_CPP_LIBRARIES}")
+set(YAML_CPP_LIBRARIES "${YAML_CPP_LIBRARIES}::${YAML_CPP_LIBRARIES}")
+
 
 # Get Trilinos as one entity
 find_package(Trilinos REQUIRED)
