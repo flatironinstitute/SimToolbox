@@ -52,13 +52,15 @@ SylinderConfig::SylinderConfig(std::string filename) {
     initPreSteps = 100;
     readConfig(config, VARNAME(initPreSteps), initPreSteps, "", true);
 
-    thermEquilTime = 0;
-    readConfig(config, VARNAME(thermEquilTime), thermEquilTime, "", true);
+    endLinkKappa = 100;
+    endLinkGap = 3.141592653589793238; // TODO Will want to make sure this is a good default
+    readConfig(config, VARNAME(endLinkKappa), endLinkKappa, "", true);
+    readConfig(config, VARNAME(endLinkGap), endLinkGap, "", true);
 
-    linkKappa = 100;
-    linkGap = 0.01;
-    readConfig(config, VARNAME(linkKappa), linkKappa, "", true);
-    readConfig(config, VARNAME(linkGap), linkGap, "", true);
+    bendingLinkKappa[0] = bendingLinkKappa[1] = bendingLinkKappa[2] = 100;
+    preferredCurvature[0] = preferredCurvature[1] = preferredCurvature[2] = 0.0;
+    readConfig(config, VARNAME(bendingLinkKappa), bendingLinkKappa, 3, "", true);
+    readConfig(config, VARNAME(preferredCurvature), preferredCurvature, 3, "", true);
 
     sylinderFixed = false;
     readConfig(config, VARNAME(sylinderFixed), sylinderFixed, "", true);
@@ -117,8 +119,10 @@ void SylinderConfig::dump() const {
         printf("Physical setting: \n");
         printf("viscosity: %g\n", viscosity);
         printf("kBT: %g\n", KBT);
-        printf("Link Kappa: %g\n", linkKappa);
-        printf("Link Gap: %g\n", linkGap);
+        printf("End link Kappa: %g\n", endLinkKappa);
+        printf("End link Gap: %g\n", endLinkGap);
+        printf("Center link Kappa: %g,%g,%g \n", bendingLinkKappa[0], bendingLinkKappa[1], bendingLinkKappa[2]);
+        printf("Prefered curvature: %g,%g,%g\n", preferredCurvature[0], preferredCurvature[1], preferredCurvature[2]);
         printf("Sylinder Number: %d\n", sylinderNumber);
         printf("Sylinder Length: %g\n", sylinderLength);
         printf("Sylinder Length Sigma: %g\n", sylinderLengthSigma);

@@ -72,9 +72,9 @@ void testAddLinks(SylinderSystem &sylinderSystem) {
         linkage[i].prev = newGid[i];
         linkage[i].next = newGid[i + 1];
     }
-    sylinderSystem.addNewLink(linkage);
+    sylinderSystem.addNewEndLink(linkage);
 
-    auto &linkMap = sylinderSystem.getLinkMap();
+    auto &linkMap = sylinderSystem.getEndLinkMap();
     for (auto &pn : linkMap) {
         printf("L %d, %d, %d\n", rank, pn.first, pn.second);
     }

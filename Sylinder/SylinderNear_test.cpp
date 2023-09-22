@@ -163,10 +163,10 @@ void testParallel() {
     auto block = calc.conPoolPtr->front().front();
     printf("stress:\n");
     printMat3(stress);
-    printf("posI:\n");
-    printVec3(block.posI);
-    printf("posJ:\n");
-    printVec3(block.posJ);
+    printf("unscaledForceComI:\n");
+    printVec3(block.unscaledForceComI);
+    printf("unscaledForceComJ:\n");
+    printVec3(block.unscaledForceComJ);
 }
 
 void testSphere() {
@@ -222,10 +222,10 @@ void testSphere() {
     auto block = calc.conPoolPtr->front().front();
     printf("stress:\n");
     printMat3(stress);
-    printf("posI:\n");
-    printVec3(block.posI);
-    printf("posJ:\n");
-    printVec3(block.posJ);
+    printf("unscaledForceComI:\n");
+    printVec3(block.unscaledForceComI);
+    printf("unscaledForceComJ:\n");
+    printVec3(block.unscaledForceComJ);
 
     // check correctness, stress = xf for spheres
     Emat3 stress1;
@@ -296,10 +296,10 @@ void testSylinderSphere() {
     auto block = calc.conPoolPtr->front().front();
     printf("stress:\n");
     printMat3(stress);
-    printf("posI:\n");
-    printVec3(block.posI);
-    printf("posJ:\n");
-    printVec3(block.posJ);
+    printf("unscaledForceComI:\n");
+    printVec3(block.unscaledForceComI);
+    printf("unscaledForceComJ:\n");
+    printVec3(block.unscaledForceComJ);
 }
 
 int main() {

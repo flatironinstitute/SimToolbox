@@ -34,18 +34,29 @@ struct ConstraintBlock {
     double gammaLB = 0;                   ///< lower bound of gamma for unilateral constraints
     int gidI = GEO_INVALID_INDEX;         ///< unique global ID of particle I
     int gidJ = GEO_INVALID_INDEX;         ///< unique global ID of particle J
+    int gidK = GEO_INVALID_INDEX;         ///< unique global ID of particle K
     int globalIndexI = GEO_INVALID_INDEX; ///< global index of particle I
     int globalIndexJ = GEO_INVALID_INDEX; ///< global index of particle J
+    int globalIndexK = GEO_INVALID_INDEX; ///< global index of particle K
     bool oneSide = false;                 ///< flag for one side constraint. body J does not appear in mobility matrix
     bool bilateral = false;               ///< if this is a bilateral constraint or not
     double kappa = 0;                     ///< spring constant. =0 means no spring
-    double normI[3] = {0, 0, 0};
-    double normJ[3] = {0, 0, 0}; ///< surface norm vector at the location of constraints (minimal separation).
-    double posI[3] = {0, 0, 0};
-    double posJ[3] = {0, 0, 0}; ///< the relative constraint position on bodies I and J.
-    double labI[3] = {0, 0, 0};
-    double labJ[3] = {0, 0, 0}; ///< the labframe location of collision points endI and endJ
-    double stress[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    double labI[3] = {0};                 ///< the labframe location of constraint on particle I
+    double labJ[3] = {0};                 ///< the labframe location of constraint on particle J
+    double labK[3] = {0};                 ///< the labframe location of constraint on particle K
+    double unscaledForceComI[3] = {0};    ///< com force induced by this constraint on particle I for
+                                          ///< unit constraint Lagrange multiplier gamma
+    double unscaledForceComJ[3] = {0};    ///< com force induced by this constraint on particle J for
+                                          ///< unit constraint Lagrange multiplier gamma
+    double unscaledForceComK[3] = {0};    ///< com force induced by this constraint on particle K for
+                                          ///< unit constraint Lagrange multiplier gamma
+    double unscaledTorqueComI[3] = {0};   ///< com torque induced by this constraint on particle I for
+                                          ///< unit constraint Lagrange multiplier gamma
+    double unscaledTorqueComJ[3] = {0};   ///< com torque induced by this constraint on particle J for
+                                          ///< unit constraint Lagrange multiplier gamma
+    double unscaledTorqueComK[3] = {0};   ///< com torque induced by this constraint on particle K for
+                                          ///< unit constraint Lagrange multiplier gamma
+    double stress[9] = {0};              ///< virial stress induced by these constraints
     ///< stress 3x3 matrix (row-major) for unit constraint force gamma
 
     /**
@@ -75,18 +86,39 @@ struct ConstraintBlock {
      * @param gammaLB_ lower bound of gamma for unilateral constraints
      */
     ConstraintBlock(double delta0_, double gamma_, int gidI_, int gidJ_, int globalIndexI_, int globalIndexJ_,
-                    const double normI_[3], const double normJ_[3], const double posI_[3], const double posJ_[3],
-                    const double labI_[3], const double labJ_[3], bool oneSide_, bool bilateral_, double kappa_,
-                    double gammaLB_)
+                    const double unscaledForceComI_[3], const double unscaledForceComJ_[3], const double unscaledTorqueComI_[3], const double unscaledTorqueComJ_[3],
+                    const double labI_[3], const double labJ_[3], bool oneSide_, bool bilateral_, double kappa_)
         : delta0(delta0_), gamma(gamma_), gidI(gidI_), gidJ(gidJ_), globalIndexI(globalIndexI_),
-          globalIndexJ(globalIndexJ_), oneSide(oneSide_), bilateral(bilateral_), kappa(kappa_), gammaLB(gammaLB_) {
+          globalIndexJ(globalIndexJ_), oneSide(oneSide_), bilateral(bilateral_), kappa(kappa_) {
         for (int d = 0; d < 3; d++) {
-            normI[d] = normI_[d];
-            normJ[d] = normJ_[d];
-            posI[d] = posI_[d];
-            posJ[d] = posJ_[d];
+            unscaledForceComI[d] = unscaledForceComI_[d];
+            unscaledForceComJ[d] = unscaledForceComJ_[d];
+            unscaledTorqueComI[d] = unscaledTorqueComI_[d];
+            unscaledTorqueComJ[d] = unscaledTorqueComJ_[d];
             labI[d] = labI_[d];
             labJ[d] = labJ_[d];
+        }
+        std::fill(stress, stress + 9, 0);
+    }
+
+    ConstraintBlock(double delta0_, double gamma_, int gidI_, int gidJ_, int gidK_, int globalIndexI_, int globalIndexJ_, int globalIndexK_,
+                    const double unscaledForceComI_[3], const double unscaledForceComJ_[3], const double unscaledForceComK_[3], 
+                    const double unscaledTorqueComI_[3], const double unscaledTorqueComJ_[3], const double unscaledTorqueComK_[3],
+                    const double labI_[3], const double labJ_[3], const double labK_[3], bool oneSide_, bool bilateral_, double kappa_)
+        : delta0(delta0_), gamma(gamma_), 
+        gidI(gidI_), gidJ(gidJ_), gidK(gidK_), 
+        globalIndexI(globalIndexI_), globalIndexJ(globalIndexJ_), globalIndexK(globalIndexK_),
+        oneSide(oneSide_), bilateral(bilateral_), kappa(kappa_) {
+        for (int d = 0; d < 3; d++) {
+            unscaledForceComI[d] = unscaledForceComI_[d];
+            unscaledForceComJ[d] = unscaledForceComJ_[d];
+            unscaledForceComK[d] = unscaledForceComK_[d];
+            unscaledTorqueComI[d] = unscaledTorqueComI_[d];
+            unscaledTorqueComJ[d] = unscaledTorqueComJ_[d];
+            unscaledTorqueComK[d] = unscaledTorqueComK_[d];
+            labI[d] = labI_[d];
+            labJ[d] = labJ_[d];
+            labK[d] = labK_[d];
         }
         std::fill(stress, stress + 9, 0);
     }
@@ -119,8 +151,8 @@ struct ConstraintBlock {
         std::swap(gidI, gidJ);
         std::swap(globalIndexI, globalIndexJ);
         for (int k = 0; k < 3; k++) {
-            std::swap(normI[k], normJ[k]);
-            std::swap(posI[k], posJ[k]);
+            std::swap(unscaledForceComI[k], unscaledForceComJ[k]);
+            std::swap(unscaledTorqueComI[k], unscaledTorqueComJ[k]);
             std::swap(labI[k], labJ[k]);
         }
     }

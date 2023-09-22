@@ -24,6 +24,14 @@
 
 #include <unordered_map>
 
+// Custom hash for std::pair<int, int>
+struct PairHash {
+    std::size_t operator () (const std::pair<int, int>& p) const {
+        std::hash<int> intHash;
+        return intHash(p.first) ^ intHash(p.second);
+    }
+};
+
 /**
  * @brief A collection of sylinders distributed to multiple MPI ranks.
  *
@@ -43,8 +51,12 @@ class SylinderSystem {
     int treeSylinderNumber;                                ///< the current max_glb number of treeSylinderNear
     void setTreeSylinder();
 
-    std::unordered_multimap<int, int> linkMap;        ///< links prev,next
-    std::unordered_multimap<int, int> linkReverseMap; ///< links next, prev
+    std::unordered_multimap<int, int> endLinkMap;        ///< links prev,next
+    std::unordered_multimap<int, int> endLinkReverseMap; ///< links next, prev
+    std::unordered_multimap<int, int> centerLinkMap;        ///< links prev,next
+    std::unordered_multimap<int, int> centerLinkReverseMap; ///< links next, prev
+    std::unordered_multimap<int, std::pair<int,int>> triLinkMap;         ///< links center, (left, right)
+    std::unordered_multimap<std::pair<int,int>, int, PairHash> triLinkReverseMap;  ///< links (left, right), center, 
 
     // Constraint stuff
     std::shared_ptr<ConstraintSolver> conSolverPtr;       ///< pointer to ConstraintSolver
@@ -93,7 +105,9 @@ class SylinderSystem {
      * Every mpi rank run this simultaneously to set linkMap from the same file
      * @param filename
      */
-    void setLinkMapFromFile(const std::string &filename);
+    void setEndLinkMapFromFile(const std::string &filename);
+    void setCenterLinkMapFromFile(const std::string &filename);
+    void setTriLinkMapFromFile(const std::string &filename);
 
     /**
      * @brief set initial configuration as given in the (.dat) file
@@ -279,8 +293,12 @@ class SylinderSystem {
     const PS::DomainInfo &getDomainInfo() { return dinfo; }
     PS::DomainInfo &getDomainInfoNonConst() { return dinfo; }
 
-    const std::unordered_multimap<int, int> &getLinkMap() { return linkMap; }
-    const std::unordered_multimap<int, int> &getLinkReverseMap() { return linkReverseMap; }
+    const std::unordered_multimap<int, int> &getEndLinkMap() { return endLinkMap; }
+    const std::unordered_multimap<int, int> &getEndLinkReverseMap() { return endLinkReverseMap; }
+    const std::unordered_multimap<int, int> &getCenterLinkMap() { return centerLinkMap; }
+    const std::unordered_multimap<int, int> &getCenterLinkReverseMap() { return centerLinkReverseMap; }
+    const std::unordered_multimap<int, std::pair<int,int>> &getTriLinkMap() { return triLinkMap; }
+    const std::unordered_multimap<std::pair<int,int>, int, PairHash> &getTriLinkReverseMap() { return triLinkReverseMap; }
 
     /**
      * @brief Get the RngPoolPtr object
@@ -358,7 +376,8 @@ class SylinderSystem {
      *
      * @param newLink
      */
-    void addNewLink(const std::vector<Link> &newLink);
+    void addNewEndLink(const std::vector<Link> &newEndLink);
+    void addNewCenterLink(const std::vector<Link> &newCenterLink);
 
     /**
      * @brief calculate both Col and Bi stress
@@ -439,9 +458,11 @@ class SylinderSystem {
     std::shared_ptr<ZDD<SylinderNearEP>> &getSylinderNearDataDirectory() { return sylinderNearDataDirectoryPtr; }
 
     // resolve constraints
-    void collectPairCollision();     ///< collect pair collision constraints
-    void collectBoundaryCollision(); ///< collect boundary collision constraints
-    void collectLinkBilateral();     ///< setup link constraints
+    void collectPairCollision();        ///< collect pair collision constraints
+    void collectBoundaryCollision();    ///< collect boundary collision constraints
+    void collectEndLinkBilateral();     ///< setup link constraints
+    void collectCenterLinkBilateral();  ///< setup link constraints
+    void collectTriLinkBilateral();     ///< setup link constraints
 
     void resolveConstraints();           ///< resolve constraints
     void saveForceVelocityConstraints(); ///< write back to sylinder.velCol and velBi
