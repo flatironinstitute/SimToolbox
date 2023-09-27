@@ -52,14 +52,17 @@ SylinderConfig::SylinderConfig(std::string filename) {
     initPreSteps = 100;
     readConfig(config, VARNAME(initPreSteps), initPreSteps, "", true);
 
-    endLinkKappa = 100;
-    endLinkGap = 3.141592653589793238; // TODO Will want to make sure this is a good default
-    readConfig(config, VARNAME(endLinkKappa), endLinkKappa, "", true);
-    readConfig(config, VARNAME(endLinkGap), endLinkGap, "", true);
+    extendLinkKappa = 100;
+    extendLinkGap = .0001; // TODO Will want to make sure this is a good default
+    readConfig(config, VARNAME(extendLinkKappa), extendLinkKappa, "", true);
+    readConfig(config, VARNAME(extendLinkGap), extendLinkGap, "", true);
 
-    bendingLinkKappa[0] = bendingLinkKappa[1] = bendingLinkKappa[2] = 100;
+    bendLinkKappa[0] = bendLinkKappa[1] = bendLinkKappa[2] = 100;
+    tribendLinkKappa[0] = tribendLinkKappa[1] = tribendLinkKappa[2] = 100;
+    readConfig(config, VARNAME(bendLinkKappa), bendLinkKappa, 3, "", true);
+    readConfig(config, VARNAME(tribendLinkKappa), tribendLinkKappa, 3, "", true);
+
     preferredCurvature[0] = preferredCurvature[1] = preferredCurvature[2] = 0.0;
-    readConfig(config, VARNAME(bendingLinkKappa), bendingLinkKappa, 3, "", true);
     readConfig(config, VARNAME(preferredCurvature), preferredCurvature, 3, "", true);
 
     sylinderFixed = false;
@@ -119,9 +122,10 @@ void SylinderConfig::dump() const {
         printf("Physical setting: \n");
         printf("viscosity: %g\n", viscosity);
         printf("kBT: %g\n", KBT);
-        printf("End link Kappa: %g\n", endLinkKappa);
-        printf("End link Gap: %g\n", endLinkGap);
-        printf("Center link Kappa: %g,%g,%g \n", bendingLinkKappa[0], bendingLinkKappa[1], bendingLinkKappa[2]);
+        printf("Extend link Kappa: %g\n", extendLinkKappa);
+        printf("Extend link Gap: %g\n", extendLinkGap);
+        printf("Bend link Kappa: %g,%g,%g \n", bendLinkKappa[0], bendLinkKappa[1], bendLinkKappa[2]);
+        printf("Tribend link Kappa: %g,%g,%g \n", tribendLinkKappa[0], tribendLinkKappa[1], tribendLinkKappa[2]);
         printf("Prefered curvature: %g,%g,%g\n", preferredCurvature[0], preferredCurvature[1], preferredCurvature[2]);
         printf("Sylinder Number: %d\n", sylinderNumber);
         printf("Sylinder Length: %g\n", sylinderLength);

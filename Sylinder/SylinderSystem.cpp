@@ -570,11 +570,17 @@ void SylinderSystem::writeAscii(const std::string &baseFolder) {
     sylinderContainer.writeParticleAscii(name.c_str(), header);
     if (commRcp->getRank() == 0) {
         FILE *fptr = fopen(name.c_str(), "a");
-        for (const auto &key_value : endLinkMap) {
+        for (const auto &key_value : pinLinkMap) {
+            fprintf(fptr, "P %d %d\n", key_value.first, key_value.second);
+        }
+        for (const auto &key_value : extendLinkMap) {
             fprintf(fptr, "E %d %d\n", key_value.first, key_value.second);
         }
         for (const auto &key_value : bendLinkMap) {
-            fprintf(fptr, "L %d %d\n", key_value.first, key_value.second);
+            fprintf(fptr, "B %d %d\n", key_value.first, key_value.second);
+        }
+        for (const auto &key_value : tribendLinkMap) {
+            fprintf(fptr, "T %d %d %d\n", key_value.first, key_value.second.first, key_value.second.second);
         }
         fclose(fptr);
     }
@@ -918,9 +924,10 @@ void SylinderSystem::resolveConstraints() {
     spdlog::debug("start collect links");
     {
         Teuchos::TimeMonitor mon(*collectLinkTimer);
-        collectEndLinkBilateral();
-        collectCenterLinkBilateral();
-        collectTriLinkBilateral();
+        collectPinLinkBilateral();
+        collectExtendLinkBilateral();
+        collectBendLinkBilateral();
+        collectTriBendLinkBilateral();
     }
 
     // solve collision
@@ -1228,7 +1235,7 @@ void SylinderSystem::collectBoundaryCollision() {
 
 void SylinderSystem::collectPairCollision() {
 
-    CalcSylinderNearForce calcColFtr(conCollectorPtr->constraintPoolPtr, endLinkMap);
+    CalcSylinderNearForce calcColFtr(conCollectorPtr->constraintPoolPtr, pinLinkMap);
 
     TEUCHOS_ASSERT(treeSylinderNearPtr);
     const int nLocal = sylinderContainer.getNumberOfParticleLocal();
@@ -1440,8 +1447,8 @@ void SylinderSystem::addNewEndLink(const std::vector<Link> &newEndLink) {
 
     // put newLinks into the map, same op on all mpi ranks
     for (const auto &ll : newLinkRecv) {
-        endLinkMap.emplace(ll.prev, ll.next);
-        endLinkReverseMap.emplace(ll.next, ll.prev);
+        extendLinkMap.emplace(ll.prev, ll.next);
+        extendLinkReverseMap.emplace(ll.next, ll.prev);
     }
 }
 
@@ -1501,7 +1508,7 @@ void SylinderSystem::collectPinLinkBilateral() {
     // if endLinkMap[sy.gid] not empty, find info for all next
     for (int i = 0; i < nLocal; i++) {
         const auto &sy = sylinderContainer[i];
-        const auto &range = endLinkMap.equal_range(sy.gid);
+        const auto &range = pinLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = range.first; it != range.second; it++) {
             gidToFind.push_back(it->second); // next
@@ -1554,9 +1561,9 @@ void SylinderSystem::collectPinLinkBilateral() {
                 const Evec3 posI = Ploc - centerI;
                 const Evec3 posJ = Qloc - centerJ;
 
-                const std:vector<Evec3> normIVec = {Evec(1.0, 0.0, 0.0),
-                                                    Evec(0.0, 1.0, 0.0),
-                                                    Evec(0.0, 0.0, 1.0)};
+                const std::vector<Evec3> normIVec = {Evec3(1.0, 0.0, 0.0),
+                                                    Evec3(0.0, 1.0, 0.0),
+                                                    Evec3(0.0, 0.0, 1.0)};
 
                 // We have three pin constraints, one for each dimension. This properly constrains our system.
                 for (size_t i = 0; i = 3 ; i++)
@@ -1609,7 +1616,7 @@ void SylinderSystem::collectExtendLinkBilateral() {
     // if extendlinkMap[sy.gid] not empty, find info for all next
     for (int i = 0; i < nLocal; i++) {
         const auto &sy = sylinderContainer[i];
-        const auto &range = extendlinkMap.equal_range(sy.gid);
+        const auto &range = extendLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = range.first; it != range.second; it++) {
             gidToFind.push_back(it->second); // next
@@ -1660,7 +1667,7 @@ void SylinderSystem::collectExtendLinkBilateral() {
                 const Evec3 Qloc = Qm;
                 const Evec3 rvec = Qloc - Ploc;
                 
-                const double delta0 = rvec.norm() - syI.radius - syJ.radius - runConfig.linkGap;
+                const double delta0 = rvec.norm() - syI.radius - syJ.radius - runConfig.extendLinkGap;
                 const double gamma = delta0 < 0 ? -delta0 : 0;
                 const Evec3 normI = (Ploc - Qloc).normalized();
                 const Evec3 normJ = -normI;
@@ -1678,7 +1685,7 @@ void SylinderSystem::collectExtendLinkBilateral() {
                                          unscaledForceComI.data(), unscaledForceComJ.data(), // direction of collision force
                                          unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
                                          Ploc.data(), Qloc.data(), // location of collision in lab frame
-                                         false, true, runConfig.extendlinkKappa);
+                                         false, true, runConfig.extendLinkKappa);
                 Emat3 stressIJ;
                 CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
                                                      syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
@@ -1796,7 +1803,7 @@ void SylinderSystem::collectBendLinkBilateral() {
                                             unscaledForceComI.data(), unscaledForceComJ.data(), // direction of collision force
                                             unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
                                             Ploc.data(), Qloc.data(), // location of collision in lab frame
-                                            false, true, runConfig.bendingLinkKappa[i]);
+                                            false, true, runConfig.bendLinkKappa[i]);
                     Emat3 stressIJ = Emat3::Zero();
                     conBlock.setStress(stressIJ);
                     conQue.push_back(conBlock);
@@ -1806,7 +1813,7 @@ void SylinderSystem::collectBendLinkBilateral() {
     }
 }
 
-void SylinderSystem::collectTriLinkBilateral() {
+void SylinderSystem::collectTriBendLinkBilateral() {
     // setup bilateral angular spring constraints between three spheres
     // need special treatment of periodic boundary conditions
     const int nLocal = sylinderContainer.getNumberOfParticleLocal();

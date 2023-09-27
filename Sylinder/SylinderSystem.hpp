@@ -296,8 +296,10 @@ class SylinderSystem {
     const PS::DomainInfo &getDomainInfo() { return dinfo; }
     PS::DomainInfo &getDomainInfoNonConst() { return dinfo; }
 
-    const std::unordered_multimap<int, int> &getEndLinkMap() { return endLinkMap; }
-    const std::unordered_multimap<int, int> &getEndLinkReverseMap() { return endLinkReverseMap; }
+    const std::unordered_multimap<int, int> &getPinLinkMap() { return pinLinkMap; }
+    const std::unordered_multimap<int, int> &getPinLinkReverseMap() { return pinLinkReverseMap; }
+    const std::unordered_multimap<int, int> &getExtendLinkMap() { return extendLinkMap; }
+    const std::unordered_multimap<int, int> &getExtendLinkReverseMap() { return extendLinkReverseMap; }
     const std::unordered_multimap<int, int> &getbendLinkMap() { return bendLinkMap; }
     const std::unordered_multimap<int, int> &getbendLinkReverseMap() { return bendLinkReverseMap; }
     const std::unordered_multimap<int, std::pair<int,int>> &getTriLinkMap() { return tribendLinkMap; }
