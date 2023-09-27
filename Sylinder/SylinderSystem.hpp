@@ -463,9 +463,10 @@ class SylinderSystem {
     // resolve constraints
     void collectPairCollision();        ///< collect pair collision constraints
     void collectBoundaryCollision();    ///< collect boundary collision constraints
-    void collectEndLinkBilateral();     ///< setup link constraints
-    void collectCenterLinkBilateral();  ///< setup link constraints
-    void collectTriLinkBilateral();     ///< setup link constraints
+    void collectPinLinkBilateral();     ///< setup link constraints
+    void collectExtendLinkBilateral();  ///< setup link constraints
+    void collectBendLinkBilateral();    ///< setup link constraints
+    void collectTriBendLinkBilateral(); ///< setup link constraints
 
     void resolveConstraints();           ///< resolve constraints
     void saveForceVelocityConstraints(); ///< write back to sylinder.velCol and velBi

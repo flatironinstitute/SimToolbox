@@ -68,9 +68,6 @@ void SylinderSystem::initialize(const SylinderConfig &runConfig_, const std::str
         setInitialFromConfig();
     }
     setLinkMapsFromFile(posFile);
-    // setEndLinkMapFromFile(posFile);
-    // setbendLinkMapFromFile(posFile);
-    // setTriLinkMapFromFile(posFile);
 
     // at this point all sylinders located on rank 0
     commRcp->barrier();
@@ -461,9 +458,9 @@ void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
                 break;
             }
             case 'T': {
-            auto [gidI, gidJ, gidK] = parseThreeLink(line);
-            tribendLinkMap.emplace(gidI, std::make_pair(gidJ, gidK));
-            tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), gidI);
+                auto [gidI, gidJ, gidK] = parseThreeLink(line);
+                tribendLinkMap.emplace(gidI, std::make_pair(gidJ, gidK));
+                tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), gidI);
             break;
             }
             default:
@@ -478,70 +475,6 @@ void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
     spdlog::debug("Tribend link number in file {} ", tribendLinkMap.size());
 }
 
-void SylinderSystem::setbendLinkMapFromFile(const std::string &filename) {
-    spdlog::warn("Reading file " + filename);
-
-    auto parseLink = [&](Link &link, const std::string &line) {
-        std::stringstream liness(line);
-        char dummy; // Used to absorb the commas
-        char header;
-        liness >> header >> dummy >> link.prev >> dummy >> link.next;
-        assert(header == 'L');
-    };
-
-    std::ifstream myfile(filename);
-    std::string line;
-    std::getline(myfile, line); // read two header lines
-    std::getline(myfile, line);
-
-    bendLinkMap.clear();
-    bendLinkReverseMap.clear();
-    while (std::getline(myfile, line)) {
-        if (line[0] == 'L') {
-            Link link;
-            parseLink(link, line);
-            bendLinkMap.emplace(link.prev, link.next);
-            bendLinkReverseMap.emplace(link.next, link.prev);
-        }
-    }
-    myfile.close();
-
-    spdlog::debug("Center link number in file {} ", bendLinkMap.size());
-}
-
-void SylinderSystem::setTriLinkMapFromFile(const std::string &filename) {
-    spdlog::warn("Reading file " + filename);
-
-    auto parseLine = [&](const std::string &line) {
-        std::stringstream liness(line);
-        char dummy; // Used to absorb the commas
-        int gidI; 
-        int gidJ; 
-        int gidK;
-        char header;
-        liness >> header >> dummy >> gidI >> dummy >> gidJ >> dummy >> gidK;
-        assert(header == 'T');
-        return std::make_tuple(gidI, gidJ, gidK);
-    };
-
-    std::ifstream myfile(filename);
-    std::string line;
-    std::getline(myfile, line); // read two header lines
-    std::getline(myfile, line);
-
-    tribendLinkMap.clear();
-    tribendLinkReverseMap.clear();
-    while (std::getline(myfile, line)) {
-        if (line[0] == 'T') {
-            auto [gidI, gidJ, gidK] = parseLine(line);
-            tribendLinkMap.emplace(gidI, std::make_pair(gidJ, gidK));
-            tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), gidI);
-        }
-    }
-    myfile.close();
-
-    spdlog::debug("Tri link number in file {} ", tribendLinkMap.size());
-}
 
 void SylinderSystem::setInitialFromVTKFile(const std::string &pvtpFileName) {
     spdlog::warn("Reading file " + pvtpFileName);
@@ -1545,7 +1478,7 @@ void SylinderSystem::buildSylinderNearDataDirectory() {
     sylinderNearDataDirectory.buildIndex();
 }
 
-void SylinderSystem::collectEndLinkBilateral() {
+void SylinderSystem::collectPinLinkBilateral() {
     // setup bilateral joint constraints between rod ends
     // need special treatment of periodic boundary conditions
 
@@ -1621,62 +1554,19 @@ void SylinderSystem::collectEndLinkBilateral() {
                 const Evec3 posI = Ploc - centerI;
                 const Evec3 posJ = Qloc - centerJ;
 
+                const std:vector<Evec3> normIVec = {Evec(1.0, 0.0, 0.0),
+                                                    Evec(0.0, 1.0, 0.0),
+                                                    Evec(0.0, 0.0, 1.0)};
+
                 // We have three pin constraints, one for each dimension. This properly constrains our system.
+                for (size_t i = 0; i = 3 ; i++)
                 {
-                    const double delta0 = rvec[0];
+                    const double delta0 = rvec[i];
                     const double gammaGuess = 0;
-                    const Evec3 normI(1.0, 0.0, 0.0);
-                    const Evec3 normJ = -normI;
-                    const Evec3 unscaledForceComI(normI[0], normI[1], normI[2]);
+                    const Evec3 unscaledForceComI = normIVec[i];
                     const Evec3 unscaledForceComJ = -unscaledForceComI;
-                    const Evec3 unscaledTorqueComI = posI.cross(normI);
-                    const Evec3 unscaledTorqueComJ = posJ.cross(normJ);
-                    ConstraintBlock conBlock(delta0, gammaGuess,              // current separation, initial guess of gamma
-                                            syI.gid, syJ.gid,           //
-                                            syI.globalIndex,            //
-                                            syJ.globalIndex,            //
-                                            unscaledForceComI.data(), unscaledForceComJ.data(), // direction of collision force
-                                            unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
-                                            Ploc.data(), Qloc.data(), // location of collision in lab frame
-                                            false, true, 0.0);
-                    Emat3 stressIJ;
-                    CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
-                                                        syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
-                    conBlock.setStress(stressIJ);
-                    conQue.push_back(conBlock);
-                }
-                {
-                    const double delta0 = rvec[1];
-                    const double gammaGuess = 0;
-                    const Evec3 normI(0.0, 1.0, 0.0);
-                    const Evec3 normJ = -normI;
-                    const Evec3 unscaledForceComI(normI[0], normI[1], normI[2]);
-                    const Evec3 unscaledForceComJ = -unscaledForceComI;
-                    const Evec3 unscaledTorqueComI = posI.cross(normI);
-                    const Evec3 unscaledTorqueComJ = posJ.cross(normJ);
-                    ConstraintBlock conBlock(delta0, gammaGuess,              // current separation, initial guess of gamma
-                                            syI.gid, syJ.gid,           //
-                                            syI.globalIndex,            //
-                                            syJ.globalIndex,            //
-                                            unscaledForceComI.data(), unscaledForceComJ.data(), // direction of collision force
-                                            unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
-                                            Ploc.data(), Qloc.data(), // location of collision in lab frame
-                                            false, true, 0.0);
-                    Emat3 stressIJ;
-                    CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
-                                                        syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
-                    conBlock.setStress(stressIJ);
-                    conQue.push_back(conBlock);
-                }
-                {
-                    const double delta0 = rvec[2];
-                    const double gammaGuess = 0;
-                    const Evec3 normI(0.0, 0.0, 1.0);
-                    const Evec3 normJ = -normI;
-                    const Evec3 unscaledForceComI(normI[0], normI[1], normI[2]);
-                    const Evec3 unscaledForceComJ = -unscaledForceComI;
-                    const Evec3 unscaledTorqueComI = posI.cross(normI);
-                    const Evec3 unscaledTorqueComJ = posJ.cross(normJ);
+                    const Evec3 unscaledTorqueComI = posI.cross(unscaledForceComI);
+                    const Evec3 unscaledTorqueComJ = posJ.cross(unscaledForceComJ);
                     ConstraintBlock conBlock(delta0, gammaGuess,              // current separation, initial guess of gamma
                                             syI.gid, syJ.gid,           //
                                             syI.globalIndex,            //
