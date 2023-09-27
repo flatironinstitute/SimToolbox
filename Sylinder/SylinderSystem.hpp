@@ -51,12 +51,14 @@ class SylinderSystem {
     int treeSylinderNumber;                                ///< the current max_glb number of treeSylinderNear
     void setTreeSylinder();
 
-    std::unordered_multimap<int, int> endLinkMap;        ///< links prev,next
-    std::unordered_multimap<int, int> endLinkReverseMap; ///< links next, prev
-    std::unordered_multimap<int, int> centerLinkMap;        ///< links prev,next
-    std::unordered_multimap<int, int> centerLinkReverseMap; ///< links next, prev
-    std::unordered_multimap<int, std::pair<int,int>> triLinkMap;         ///< links center, (left, right)
-    std::unordered_multimap<std::pair<int,int>, int, PairHash> triLinkReverseMap;  ///< links (left, right), center, 
+    std::unordered_multimap<int, int> pinLinkMap;        ///< links prev,next
+    std::unordered_multimap<int, int> pinLinkReverseMap; ///< links next, prev
+    std::unordered_multimap<int, int> extendLinkMap;        ///< links prev,next
+    std::unordered_multimap<int, int> extendLinkReverseMap; ///< links next, prev
+    std::unordered_multimap<int, int> bendLinkMap;        ///< links prev,next
+    std::unordered_multimap<int, int> bendLinkReverseMap; ///< links next, prev
+    std::unordered_multimap<int, std::pair<int,int>> tribendLinkMap;         ///< links center, (left, right)
+    std::unordered_multimap<std::pair<int,int>, int, PairHash> tribendLinkReverseMap;  ///< links (left, right), center, 
 
     // Constraint stuff
     std::shared_ptr<ConstraintSolver> conSolverPtr;       ///< pointer to ConstraintSolver
@@ -108,9 +110,7 @@ class SylinderSystem {
      * Every mpi rank run this simultaneously to set linkMap from the same file
      * @param filename
      */
-    void setEndLinkMapFromFile(const std::string &filename);
-    void setCenterLinkMapFromFile(const std::string &filename);
-    void setTriLinkMapFromFile(const std::string &filename);
+    void setLinkMapsFromFile(const std::string &filename);
 
     /**
      * @brief set initial configuration as given in the (.dat) file
@@ -298,10 +298,10 @@ class SylinderSystem {
 
     const std::unordered_multimap<int, int> &getEndLinkMap() { return endLinkMap; }
     const std::unordered_multimap<int, int> &getEndLinkReverseMap() { return endLinkReverseMap; }
-    const std::unordered_multimap<int, int> &getCenterLinkMap() { return centerLinkMap; }
-    const std::unordered_multimap<int, int> &getCenterLinkReverseMap() { return centerLinkReverseMap; }
-    const std::unordered_multimap<int, std::pair<int,int>> &getTriLinkMap() { return triLinkMap; }
-    const std::unordered_multimap<std::pair<int,int>, int, PairHash> &getTriLinkReverseMap() { return triLinkReverseMap; }
+    const std::unordered_multimap<int, int> &getbendLinkMap() { return bendLinkMap; }
+    const std::unordered_multimap<int, int> &getbendLinkReverseMap() { return bendLinkReverseMap; }
+    const std::unordered_multimap<int, std::pair<int,int>> &getTriLinkMap() { return tribendLinkMap; }
+    const std::unordered_multimap<std::pair<int,int>, int, PairHash> &getTriLinkReverseMap() { return tribendLinkReverseMap; }
 
     /**
      * @brief Get the RngPoolPtr object

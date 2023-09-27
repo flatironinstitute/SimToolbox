@@ -43,10 +43,11 @@ class SylinderConfig {
     // physical constant
     double viscosity; ///< unit pN/(um^2 s), water ~ 0.0009
     double KBT;       ///< pN.um, 0.00411 at 300K
-    double endLinkKappa; ///< pN/um stiffness of sylinder links
-    double endLinkGap;     ///< um length of gap between sylinder links
+    double extendLinkKappa; ///< pN/um stiffness of sylinder links
+    double extendLinkGap;     ///< um length of gap between sylinder links
+    double bendLinkKappa[3]; ///< pN/um stiffness of sylinder links
+    double tribendLinkKappa[3]; ///< pN/um stiffness of sylinder links
     double preferredCurvature[3];  ///< um length of gap between sylinder links
-    double bendingLinkKappa[3]; ///< pN/um stiffness of sylinder links
 
     // sylinder settings
     bool sylinderFixed = false; ///< sylinders do not move

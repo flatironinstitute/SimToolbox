@@ -67,9 +67,10 @@ void SylinderSystem::initialize(const SylinderConfig &runConfig_, const std::str
     } else {
         setInitialFromConfig();
     }
-    setEndLinkMapFromFile(posFile);
-    setCenterLinkMapFromFile(posFile);
-    setTriLinkMapFromFile(posFile);
+    setLinkMapsFromFile(posFile);
+    // setEndLinkMapFromFile(posFile);
+    // setbendLinkMapFromFile(posFile);
+    // setTriLinkMapFromFile(posFile);
 
     // at this point all sylinders located on rank 0
     commRcp->barrier();
@@ -152,9 +153,7 @@ void SylinderSystem::reinitialize(const SylinderConfig &runConfig_, const std::s
     std::string baseFolder = getCurrentResultFolder();
     setInitialFromVTKFile(baseFolder + pvtpFileName);
 
-    setEndLinkMapFromFile(baseFolder + asciiFileName);
-    setCenterLinkMapFromFile(baseFolder + asciiFileName);
-    setTriLinkMapFromFile(baseFolder + asciiFileName);
+    setLinkMapsFromFile(baseFolder + asciiFileName);
 
     // VTK data is wrote before the Euler step, thus we need to run one Euler step below
     if (eulerStep)
@@ -405,15 +404,24 @@ void SylinderSystem::setInitialFromFile(const std::string &filename) {
     }
 }
 
-void SylinderSystem::setEndLinkMapFromFile(const std::string &filename) {
+void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
     spdlog::warn("Reading file " + filename);
 
-    auto parseLink = [&](Link &link, const std::string &line) {
+    auto parseTwoLink = [&](Link &link, const std::string &line) {
         std::stringstream liness(line);
-        char dummy; // Used to absorb the commas
         char header;
-        liness >> header >> dummy >> link.prev >> dummy >> link.next;
-        assert(header == 'E');
+        liness >> header >> link.prev >> link.next;
+    };
+
+    auto parseThreeLink = [&](const std::string &line) {
+        std::stringstream liness(line);
+        int gidI; 
+        int gidJ; 
+        int gidK;
+        char header;
+        liness >> header >> gidI >> gidJ >> gidK;
+        assert(header == 'T');
+        return std::make_tuple(gidI, gidJ, gidK);
     };
 
     std::ifstream myfile(filename);
@@ -421,22 +429,56 @@ void SylinderSystem::setEndLinkMapFromFile(const std::string &filename) {
     std::getline(myfile, line); // read two header lines
     std::getline(myfile, line);
 
-    endLinkMap.clear();
-    endLinkReverseMap.clear();
+    // Make sure maps are clean
+    pinLinkMap.clear();
+    pinLinkReverseMap.clear();
+    extendLinkMap.clear();
+    extendLinkReverseMap.clear();
+    bendLinkMap.clear();
+    bendLinkReverseMap.clear();
+    tribendLinkMap.clear();
+    tribendLinkReverseMap.clear();
+
     while (std::getline(myfile, line)) {
-        if (line[0] == 'E') {
-            Link link;
-            parseLink(link, line);
-            endLinkMap.emplace(link.prev, link.next);
-            endLinkReverseMap.emplace(link.next, link.prev);
+        Link link;
+        switch (line[0]) {
+            case 'P': {
+                parseTwoLink(link, line);
+                pinLinkMap.emplace(link.prev, link.next);
+                pinLinkReverseMap.emplace(link.next, link.prev);
+                break;
+            }
+            case 'E': {
+                parseTwoLink(link, line);
+                extendLinkMap.emplace(link.prev, link.next);
+                extendLinkReverseMap.emplace(link.next, link.prev);
+                break;
+            }
+            case 'B': {
+                parseTwoLink(link, line);
+                bendLinkMap.emplace(link.prev, link.next);
+                bendLinkReverseMap.emplace(link.next, link.prev);
+                break;
+            }
+            case 'T': {
+            auto [gidI, gidJ, gidK] = parseThreeLink(line);
+            tribendLinkMap.emplace(gidI, std::make_pair(gidJ, gidK));
+            tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), gidI);
+            break;
+            }
+            default:
+                break;
         }
     }
     myfile.close();
 
-    spdlog::debug("End link number in file {} ", endLinkMap.size());
+    spdlog::debug("Pin link number in file {} ", pinLinkMap.size());
+    spdlog::debug("Extend link number in file {} ", extendLinkMap.size());
+    spdlog::debug("Bend link number in file {} ", bendLinkMap.size());
+    spdlog::debug("Tribend link number in file {} ", tribendLinkMap.size());
 }
 
-void SylinderSystem::setCenterLinkMapFromFile(const std::string &filename) {
+void SylinderSystem::setbendLinkMapFromFile(const std::string &filename) {
     spdlog::warn("Reading file " + filename);
 
     auto parseLink = [&](Link &link, const std::string &line) {
@@ -452,19 +494,19 @@ void SylinderSystem::setCenterLinkMapFromFile(const std::string &filename) {
     std::getline(myfile, line); // read two header lines
     std::getline(myfile, line);
 
-    centerLinkMap.clear();
-    centerLinkReverseMap.clear();
+    bendLinkMap.clear();
+    bendLinkReverseMap.clear();
     while (std::getline(myfile, line)) {
         if (line[0] == 'L') {
             Link link;
             parseLink(link, line);
-            centerLinkMap.emplace(link.prev, link.next);
-            centerLinkReverseMap.emplace(link.next, link.prev);
+            bendLinkMap.emplace(link.prev, link.next);
+            bendLinkReverseMap.emplace(link.next, link.prev);
         }
     }
     myfile.close();
 
-    spdlog::debug("Center link number in file {} ", centerLinkMap.size());
+    spdlog::debug("Center link number in file {} ", bendLinkMap.size());
 }
 
 void SylinderSystem::setTriLinkMapFromFile(const std::string &filename) {
@@ -487,18 +529,18 @@ void SylinderSystem::setTriLinkMapFromFile(const std::string &filename) {
     std::getline(myfile, line); // read two header lines
     std::getline(myfile, line);
 
-    triLinkMap.clear();
-    triLinkReverseMap.clear();
+    tribendLinkMap.clear();
+    tribendLinkReverseMap.clear();
     while (std::getline(myfile, line)) {
         if (line[0] == 'T') {
             auto [gidI, gidJ, gidK] = parseLine(line);
-            triLinkMap.emplace(gidI, std::make_pair(gidJ, gidK));
-            triLinkReverseMap.emplace(std::make_pair(gidJ, gidK), gidI);
+            tribendLinkMap.emplace(gidI, std::make_pair(gidJ, gidK));
+            tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), gidI);
         }
     }
     myfile.close();
 
-    spdlog::debug("Tri link number in file {} ", triLinkMap.size());
+    spdlog::debug("Tri link number in file {} ", tribendLinkMap.size());
 }
 
 void SylinderSystem::setInitialFromVTKFile(const std::string &pvtpFileName) {
@@ -598,7 +640,7 @@ void SylinderSystem::writeAscii(const std::string &baseFolder) {
         for (const auto &key_value : endLinkMap) {
             fprintf(fptr, "E %d %d\n", key_value.first, key_value.second);
         }
-        for (const auto &key_value : centerLinkMap) {
+        for (const auto &key_value : bendLinkMap) {
             fprintf(fptr, "L %d %d\n", key_value.first, key_value.second);
         }
         fclose(fptr);
@@ -1483,8 +1525,8 @@ void SylinderSystem::addNewCenterLink(const std::vector<Link> &newCenterLink) {
 
     // put newLinks into the map, same op on all mpi ranks
     for (const auto &ll : newLinkRecv) {
-        centerLinkMap.emplace(ll.prev, ll.next);
-        centerLinkReverseMap.emplace(ll.next, ll.prev);
+        bendLinkMap.emplace(ll.prev, ll.next);
+        bendLinkReverseMap.emplace(ll.next, ll.prev);
     }
 }
 
@@ -1675,10 +1717,10 @@ void SylinderSystem::collectCenterLinkBilateral() {
     gidToFind.reserve(nLocal);
 
     // loop over all sylinders
-    // if centerLinkMap[sy.gid] not empty, find info for all next
+    // if bendLinkMap[sy.gid] not empty, find info for all next
     for (int i = 0; i < nLocal; i++) {
         const auto &sy = sylinderContainer[i];
-        const auto &range = centerLinkMap.equal_range(sy.gid);
+        const auto &range = bendLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = range.first; it != range.second; it++) {
             gidToFind.push_back(it->second); // next
@@ -1834,10 +1876,10 @@ void SylinderSystem::collectTriLinkBilateral() {
     gidToFind.reserve(nLocal);
 
     // loop over all sylinders
-    // if triLinkMap[sy.gid] not empty, find info for all next
+    // if tribendLinkMap[sy.gid] not empty, find info for all next
     for (int i = 0; i < nLocal; i++) {
         const auto &sy = sylinderContainer[i];
-        const auto& [rangeStart, rangeStop] = triLinkMap.equal_range(sy.gid);
+        const auto& [rangeStart, rangeStop] = tribendLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = rangeStart; it != rangeStop; it++) {
             const auto& [key, pair] = *it;
