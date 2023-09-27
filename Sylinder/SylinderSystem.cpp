@@ -335,7 +335,6 @@ void SylinderSystem::setInitialFromFile(const std::string &filename) {
 
     auto parseSylinder = [&](Sylinder &sy, const std::string &line) {
         std::stringstream liness(line);
-        char dummy; // Used to absorb the commas
 
         // data variables
         int gid;
@@ -346,11 +345,11 @@ void SylinderSystem::setInitialFromFile(const std::string &filename) {
         int group = -1;
 
         // Read in a single sylinder from the line 
-        liness >> type >> dummy 
-               >> gid >> dummy 
-               >> radius >> dummy 
-               >> mx >> dummy >> my >> dummy >> mz >> dummy 
-               >> px >> dummy >> py >> dummy >> pz >> dummy 
+        liness >> type 
+               >> gid 
+               >> radius 
+               >> mx >> my >> mz 
+               >> px >> py >> pz  
                >> group;
 
         // Set the sylinder object
