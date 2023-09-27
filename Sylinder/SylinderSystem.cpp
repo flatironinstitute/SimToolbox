@@ -1586,6 +1586,109 @@ void SylinderSystem::collectPinLinkBilateral() {
     }
 }
 
+void SylinderSystem::collectExtendLinkBilateral() {
+    // setup bilateral link constraints
+    // need special treatment of periodic boundary conditions
+
+    const int nLocal = sylinderContainer.getNumberOfParticleLocal();
+    auto &conPool = *(this->conCollectorPtr->constraintPoolPtr);
+    if (conPool.size() != omp_get_max_threads()) {
+        spdlog::critical("conPool multithread mismatch error");
+        std::exit(1);
+    }
+
+    // fill the data to find
+    auto &gidToFind = sylinderNearDataDirectoryPtr->gidToFind;
+    const auto &dataToFind = sylinderNearDataDirectoryPtr->dataToFind;
+
+    std::vector<int> gidDisp(nLocal + 1, 0);
+    gidToFind.clear();
+    gidToFind.reserve(nLocal);
+
+    // loop over all sylinders
+    // if extendlinkMap[sy.gid] not empty, find info for all next
+    for (int i = 0; i < nLocal; i++) {
+        const auto &sy = sylinderContainer[i];
+        const auto &range = extendlinkMap.equal_range(sy.gid);
+        int count = 0;
+        for (auto it = range.first; it != range.second; it++) {
+            gidToFind.push_back(it->second); // next
+            count++;
+        }
+        gidDisp[i + 1] = gidDisp[i] + count; // number of links for each local Sylinder
+    }
+
+    sylinderNearDataDirectoryPtr->find();
+
+#pragma omp parallel
+    {
+        const int threadId = omp_get_thread_num();
+        auto &conQue = conPool[threadId];
+#pragma omp for
+        for (int i = 0; i < nLocal; i++) {
+            const auto &syI = sylinderContainer[i]; // sylinder
+            const int lb = gidDisp[i];
+            const int ub = gidDisp[i + 1];
+
+            for (int j = lb; j < ub; j++) {
+                const auto &syJ = sylinderNearDataDirectoryPtr->dataToFind[j]; // sylinderNear
+
+                const Evec3 &centerI = ECmap3(syI.pos);
+                Evec3 centerJ = ECmap3(syJ.pos);
+                // apply PBC on centerJ
+                for (int k = 0; k < 3; k++) {
+                    if (!runConfig.simBoxPBC[k])
+                        continue;
+                    double trg = centerI[k];
+                    double xk = centerJ[k];
+                    findPBCImage(runConfig.simBoxLow[k], runConfig.simBoxHigh[k], xk, trg);
+                    centerJ[k] = xk;
+                    // error check
+                    if (fabs(trg - xk) > 0.5 * (runConfig.simBoxHigh[k] - runConfig.simBoxLow[k])) {
+                        spdlog::critical("pbc image error in bilateral links");
+                        std::exit(1);
+                    }
+                }
+                // sylinders are not treated as spheres for bilateral constraints
+                // constraint is always added between Pp and Qm
+                // constraint target length is radiusI + radiusJ + runConfig.linkGap
+                const Evec3 directionI = ECmapq(syI.orientation) * Evec3(0, 0, 1);
+                const Evec3 Pp = centerI + directionI * (0.5 * syI.length); // plus end
+                const Evec3 directionJ = ECmap3(syJ.direction);
+                const Evec3 Qm = centerJ - directionJ * (0.5 * syJ.length);
+                const Evec3 Ploc = Pp;
+                const Evec3 Qloc = Qm;
+                const Evec3 rvec = Qloc - Ploc;
+                
+                const double delta0 = rvec.norm() - syI.radius - syJ.radius - runConfig.linkGap;
+                const double gamma = delta0 < 0 ? -delta0 : 0;
+                const Evec3 normI = (Ploc - Qloc).normalized();
+                const Evec3 normJ = -normI;
+                const Evec3 posI = Ploc - centerI;
+                const Evec3 posJ = Qloc - centerJ;
+                const Evec3 unscaledForceComI = normI;
+                const Evec3 unscaledForceComJ = -unscaledForceComI;
+                const Evec3 unscaledTorqueComI = posI.cross(unscaledForceComI);
+                const Evec3 unscaledTorqueComJ = posJ.cross(unscaledForceComJ);
+
+                ConstraintBlock conBlock(delta0, gamma,              // current separation, initial guess of gamma
+                                         syI.gid, syJ.gid,           //
+                                         syI.globalIndex,            //
+                                         syJ.globalIndex,            //
+                                         unscaledForceComI.data(), unscaledForceComJ.data(), // direction of collision force
+                                         unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
+                                         Ploc.data(), Qloc.data(), // location of collision in lab frame
+                                         false, true, runConfig.extendlinkKappa);
+                Emat3 stressIJ;
+                CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
+                                                     syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
+                conBlock.setStress(stressIJ);
+                conQue.push_back(conBlock);
+            }
+        }
+    }
+}
+
 void SylinderSystem::collectCenterLinkBilateral() {
     // setup bilateral angular spring constraints between rod centers
     // need special treatment of periodic boundary conditions

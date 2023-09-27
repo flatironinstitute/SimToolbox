@@ -463,6 +463,8 @@ class SylinderSystem {
     // resolve constraints
     void collectPairCollision();        ///< collect pair collision constraints
     void collectBoundaryCollision();    ///< collect boundary collision constraints
+
+    // resolve bilateral constraints
     void collectPinLinkBilateral();     ///< setup link constraints
     void collectExtendLinkBilateral();  ///< setup link constraints
     void collectBendLinkBilateral();    ///< setup link constraints
