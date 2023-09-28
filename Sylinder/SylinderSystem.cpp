@@ -1906,9 +1906,9 @@ void SylinderSystem::collectTriBendLinkBilateral() {
                 const auto equatIJ = equatI.slerp(0.5, equatJ).normalized();
 
                 // The triad of directors is given by the following three unit vectors:
-                const auto d0 = equatIJ * Evec3(1, 0, 0);
-                const auto d1 = equatIJ * Evec3(0, 1, 0);   
-                const auto d2 = equatIJ * Evec3(0, 0, 1);
+                const std::vector<Evec3> dirIJVec = {equatIJ * Evec3(1, 0, 0), 
+                                                     equatIJ * Evec3(0, 1, 0), 
+                                                     equatIJ * Evec3(0, 0, 1)};
 
                 // The momenet of inertia of the lines connecting the rods
                 Emat3 momIntJI = distJI * distJI * (orientVecJI * orientVecJI.transpose() - Emat3::Identity());
@@ -1916,18 +1916,18 @@ void SylinderSystem::collectTriBendLinkBilateral() {
                 Emat3 momIntJIinv = momIntJI.inverse();
                 Emat3 momIntIKinv = momIntIK.inverse();
 
-                // The curvature of the two rods is given by kappa = vec[equatI.conjugate() * equatJ - equatI * equatJ.conjugate()]
+                // The curvature of the three spheres is given by kappa = vec[equatI.conjugate() * equatJ - equatI * equatJ.conjugate()]
                 // where vec is the vector part of a quaternion.
                 const Evec3 curvature = (equatI.conjugate() * equatJ).vec() - (equatI * equatJ.conjugate()).vec();
+
+                for (size_t i = 0; i < 3; i++)
                 {
-                    // The first constraint is given by kappa_1 - kappa_01 - lambda_1 / b_1 = 0
-                    // This constraint is applied along the first director.
-                    const double delta0 = curvature[0] - runConfig.preferredCurvature[0];
-                    const Evec3 unscaledTorqueComBetweenJandI = -d0;
-                    const Evec3 unscaledTorqueComBetweenIandK = d0;
-                    const Evec3 unscaledForceComJ = -momIntJIinv * unscaledTorqueComBetweenJandI;
-                    const Evec3 unscaledForceComI = momIntJIinv * unscaledTorqueComBetweenJandI - momIntIKinv * unscaledTorqueComBetweenIandK;
-                    const Evec3 unscaledForceComK = momIntIKinv * unscaledTorqueComBetweenIandK;
+                    const double delta0 = curvature[i] - runConfig.preferredCurvature[i];
+                    const Evec3 unscaledTorqueComBetweenJandI = -dirIJVec[i] ;
+                    const Evec3 unscaledTorqueComBetweenIandK = -unscaledTorqueComBetweenJandI;
+                    const Evec3 unscaledForceComJ = -momIntJIinv * (distJI*orientVecJI).cross(unscaledTorqueComBetweenJandI);
+                    const Evec3 unscaledForceComI = momIntJIinv * (distJI*orientVecJI).cross(unscaledTorqueComBetweenJandI) - momIntIKinv * (distIK*orientVecIK).cross(unscaledTorqueComBetweenIandK);
+                    const Evec3 unscaledForceComK = momIntIKinv * (distIK*orientVecIK).cross(unscaledTorqueComBetweenIandK);
                     const Evec3 unscaledTorqueComI(0.0, 0.0, 0.0);
                     const Evec3 unscaledTorqueComJ(0.0, 0.0, 0.0);
                     const Evec3 unscaledTorqueComK(0.0, 0.0, 0.0);
@@ -1939,57 +1939,7 @@ void SylinderSystem::collectTriBendLinkBilateral() {
                                             unscaledForceComI.data(), unscaledForceComJ.data(), unscaledForceComK.data(), // direction of collision force
                                             unscaledTorqueComI.data(), unscaledTorqueComJ.data(), unscaledTorqueComK.data(), // location of collision relative to particle center
                                             centerI.data(), centerJ.data(), centerK.data(), // location of collision in lab frame
-                                            false, true, runConfig.tribendLinkKappa[0]);
-                    Emat3 stressIJ = Emat3::Zero();
-                    conBlock.setStress(stressIJ);
-                    conQue.push_back(conBlock);
-                }
-                {
-                    // The second constraint is given by kappa_2 - kappa_02 - lambda_2 / b_2 = 0
-                    // This constraint is applied along the second director.
-                    const double delta0 = curvature[1] - runConfig.preferredCurvature[1];
-                    const Evec3 unscaledTorqueComBetweenJandI = -d1;
-                    const Evec3 unscaledTorqueComBetweenIandK = d1;
-                    const Evec3 unscaledForceComJ = -momIntJIinv * unscaledTorqueComBetweenJandI;
-                    const Evec3 unscaledForceComI = momIntJIinv * unscaledTorqueComBetweenJandI - momIntIKinv * unscaledTorqueComBetweenIandK;
-                    const Evec3 unscaledForceComK = momIntIKinv * unscaledTorqueComBetweenIandK;
-                    const Evec3 unscaledTorqueComI(0.0, 0.0, 0.0);
-                    const Evec3 unscaledTorqueComJ(0.0, 0.0, 0.0);
-                    const Evec3 unscaledTorqueComK(0.0, 0.0, 0.0);
-
-                    const double gammaGuess = 0;
-                    ConstraintBlock conBlock(delta0, gammaGuess,        // current separation, initial guess of gamma
-                                            syI.gid, syJ.gid, syK.gid,           //
-                                            syI.globalIndex, syJ.globalIndex, syK.globalIndex,         //
-                                            unscaledForceComI.data(), unscaledForceComJ.data(), unscaledForceComK.data(), // direction of collision force
-                                            unscaledTorqueComI.data(), unscaledTorqueComJ.data(), unscaledTorqueComK.data(), // location of collision relative to particle center
-                                            centerI.data(), centerJ.data(), centerK.data(), // location of collision in lab frame
-                                            false, true, runConfig.tribendLinkKappa[1]);
-                    Emat3 stressIJ = Emat3::Zero();
-                    conBlock.setStress(stressIJ);
-                    conQue.push_back(conBlock);
-                }
-                {
-                    // The third constraint is given by kappa_3 - kappa_03 - lambda_3 / b_3 = 0
-                    // This constraint is applied along the third director.
-                    const double delta0 = curvature[2] - runConfig.preferredCurvature[2];
-                    const Evec3 unscaledTorqueComBetweenJandI = -d2;
-                    const Evec3 unscaledTorqueComBetweenIandK = d2;
-                    const Evec3 unscaledForceComJ = -momIntJIinv * unscaledTorqueComBetweenJandI;
-                    const Evec3 unscaledForceComI = momIntJIinv * unscaledTorqueComBetweenJandI - momIntIKinv * unscaledTorqueComBetweenIandK;
-                    const Evec3 unscaledForceComK = momIntIKinv * unscaledTorqueComBetweenIandK;
-                    const Evec3 unscaledTorqueComI(0.0, 0.0, 0.0);
-                    const Evec3 unscaledTorqueComJ(0.0, 0.0, 0.0);
-                    const Evec3 unscaledTorqueComK(0.0, 0.0, 0.0);
-
-                    const double gammaGuess = 0;
-                    ConstraintBlock conBlock(delta0, gammaGuess,        // current separation, initial guess of gamma
-                                            syI.gid, syJ.gid, syK.gid,           //
-                                            syI.globalIndex, syJ.globalIndex, syK.globalIndex,         //
-                                            unscaledForceComI.data(), unscaledForceComJ.data(), unscaledForceComK.data(), // direction of collision force
-                                            unscaledTorqueComI.data(), unscaledTorqueComJ.data(), unscaledTorqueComK.data(), // location of collision relative to particle center
-                                            centerI.data(), centerJ.data(), centerK.data(), // location of collision in lab frame
-                                            false, true, runConfig.tribendLinkKappa[2]);
+                                            false, true, runConfig.tribendLinkKappa[i]);
                     Emat3 stressIJ = Emat3::Zero();
                     conBlock.setStress(stressIJ);
                     conQue.push_back(conBlock);
