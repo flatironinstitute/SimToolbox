@@ -372,7 +372,7 @@ int BCQPSolver::solveAPGD(Teuchos::RCP<TV> &xsolRcp, const double tol, const int
 
         // line 29-30, Mazhar, 2015
         Lk *= 0.9;
-        tk = 1 / Lk;
+        tk = 1. / Lk;
 
         // next iteration
         // swap the contents of pointers directly, be careful
@@ -460,11 +460,11 @@ void BCQPSolver::boundProjection(Teuchos::RCP<TV> &vecRcp) const {
 
 double BCQPSolver::checkProjectionResidual(const Teuchos::RCP<const TV> &XRcp, const Teuchos::RCP<const TV> &YRcp,
                                            const Teuchos::RCP<TV> &QRcp) const {
-    const double eps = std::numeric_limits<double>::epsilon() * 100;
+    const double eps = std::numeric_limits<double>::epsilon() * 100; // Look for actual infinity
     auto xPtr = XRcp->getLocalView<Kokkos::HostSpace>();   // LeftLayout
     auto yPtr = YRcp->getLocalView<Kokkos::HostSpace>();   // LeftLayout
-    auto lbPtr = lbRcp->getLocalView<Kokkos::HostSpace>(); // LeftLayout
-    auto ubPtr = ubRcp->getLocalView<Kokkos::HostSpace>(); // LeftLayout
+    auto lbPtr = lbRcp->getLocalView<Kokkos::HostSpace>(); // LeftLayout, check to make sure this is -inf
+    auto ubPtr = ubRcp->getLocalView<Kokkos::HostSpace>(); // LeftLayout, check to make sure this is +inf
     auto qPtr = QRcp->getLocalView<Kokkos::HostSpace>();   // LeftLayout
     QRcp->modify<Kokkos::HostSpace>();
     const int ibound = xPtr.dimension_0();

@@ -276,7 +276,7 @@ int ConstraintCollector::buildConstraintMatrixVector(const Teuchos::RCP<const TM
             } else if (conQue[j].gidK == GEO_INVALID_INDEX) {
                 cBlockNNZ = 12;
             } else {
-                cBlockNNZ = 16;
+                cBlockNNZ = 18;
             }
             rowPointers[rowPointerIndex] = rowPointers[rowPointerIndex - 1] + cBlockNNZ;
             colIndexCount += cBlockNNZ;

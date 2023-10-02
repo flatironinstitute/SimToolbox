@@ -1392,6 +1392,7 @@ void SylinderSystem::calcOrderParameter() {
     );
 }
 
+// DO NOT USE THIS FUNCTION
 std::vector<int> SylinderSystem::addNewSylinder(const std::vector<Sylinder> &newSylinder) {
     // assign unique new gid for sylinders on all ranks
     std::pair<int, int> maxGid = getMaxGid();
@@ -1433,6 +1434,7 @@ std::vector<int> SylinderSystem::addNewSylinder(const std::vector<Sylinder> &new
     return newGidRecv;
 }
 
+// DO NOT USE THIS FUNCTION
 void SylinderSystem::addNewEndLink(const std::vector<Link> &newEndLink) {
     // synchronize newLink to all mpi ranks
     const int newCountLocal = newEndLink.size();
@@ -1451,6 +1453,7 @@ void SylinderSystem::addNewEndLink(const std::vector<Link> &newEndLink) {
     }
 }
 
+// DO NOT USE THIS FUNCTION
 void SylinderSystem::addNewCenterLink(const std::vector<Link> &newCenterLink) {
     // synchronize newLink to all mpi ranks
     const int newCountLocal = newCenterLink.size();
@@ -1685,9 +1688,10 @@ void SylinderSystem::collectExtendLinkBilateral() {
                                          unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
                                          Ploc.data(), Qloc.data(), // location of collision in lab frame
                                          false, true, runConfig.extendLinkKappa);
-                Emat3 stressIJ;
-                CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
-                                                     syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
+                // Emat3 stressIJ;
+                // CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
+                                                    //  syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
+                Emat3 stressIJ = Emat3::Zero();
                 conBlock.setStress(stressIJ);
                 conQue.push_back(conBlock);
             }
