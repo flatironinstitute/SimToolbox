@@ -1150,7 +1150,11 @@ void SylinderSystem::calcVelocityBrown() {
             Evec3 omega = sqrt(dragRotInv) * kBTfactor * Wrot;   // regularized identity rotation drag
 
             Emap3(sy.velBrown) = vel;
-            Emap3(sy.omegaBrown) = omega;
+            if (sy.isSphere()) {
+                Emap3(sy.omegaBrown) = Evec3(0, 0, 0);
+            } else {
+                Emap3(sy.omegaBrown) = omega;
+            }
         }
     }
 
@@ -1688,10 +1692,10 @@ void SylinderSystem::collectExtendLinkBilateral() {
                                          unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
                                          Ploc.data(), Qloc.data(), // location of collision in lab frame
                                          false, true, runConfig.extendLinkKappa);
-                // Emat3 stressIJ;
-                // CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
-                                                    //  syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
-                Emat3 stressIJ = Emat3::Zero();
+                Emat3 stressIJ;
+                CalcSylinderNearForce::collideStress(directionI, directionJ, centerI, centerJ, syI.length, syJ.length,
+                                                     syI.radius, syJ.radius, 1.0, Ploc, Qloc, stressIJ);
+                // Emat3 stressIJ = Emat3::Zero();
                 conBlock.setStress(stressIJ);
                 conQue.push_back(conBlock);
             }
@@ -1915,10 +1919,10 @@ void SylinderSystem::collectTriBendLinkBilateral() {
                                                      equatIJ * Evec3(0, 0, 1)};
 
                 // The momenet of inertia of the lines connecting the rods
-                Emat3 momIntJI = distJI * distJI * (orientVecJI * orientVecJI.transpose() - Emat3::Identity());
-                Emat3 momIntIK = distIK * distIK * (orientVecIK * orientVecIK.transpose() - Emat3::Identity());
-                Emat3 momIntJIinv = momIntJI.inverse();
-                Emat3 momIntIKinv = momIntIK.inverse();
+                // Emat3 momIntJI = distJI * distJI * (orientVecJI * orientVecJI.transpose() - Emat3::Identity());
+                // Emat3 momIntIK = distIK * distIK * (orientVecIK * orientVecIK.transpose() - Emat3::Identity());
+                // Emat3 momIntJIinv = momIntJI.inverse();
+                // Emat3 momIntIKinv = momIntIK.inverse();
 
                 // The curvature of the three spheres is given by kappa = vec[equatI.conjugate() * equatJ - equatI * equatJ.conjugate()]
                 // where vec is the vector part of a quaternion.
@@ -1929,9 +1933,9 @@ void SylinderSystem::collectTriBendLinkBilateral() {
                     const double delta0 = curvature[i] - runConfig.preferredCurvature[i];
                     const Evec3 unscaledTorqueComBetweenJandI = -dirIJVec[i] ;
                     const Evec3 unscaledTorqueComBetweenIandK = -unscaledTorqueComBetweenJandI;
-                    const Evec3 unscaledForceComJ = -momIntJIinv * (distJI*orientVecJI).cross(unscaledTorqueComBetweenJandI);
-                    const Evec3 unscaledForceComI = momIntJIinv * (distJI*orientVecJI).cross(unscaledTorqueComBetweenJandI) - momIntIKinv * (distIK*orientVecIK).cross(unscaledTorqueComBetweenIandK);
-                    const Evec3 unscaledForceComK = momIntIKinv * (distIK*orientVecIK).cross(unscaledTorqueComBetweenIandK);
+                    const Evec3 unscaledForceComJ = orientVecJI.cross(unscaledTorqueComBetweenJandI)/distJI;
+                    const Evec3 unscaledForceComK = -orientVecIK.cross(unscaledTorqueComBetweenIandK)/distIK;
+                    const Evec3 unscaledForceComI = -unscaledForceComJ  - unscaledForceComK;
                     const Evec3 unscaledTorqueComI(0.0, 0.0, 0.0);
                     const Evec3 unscaledTorqueComJ(0.0, 0.0, 0.0);
                     const Evec3 unscaledTorqueComK(0.0, 0.0, 0.0);
