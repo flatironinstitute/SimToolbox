@@ -59,11 +59,11 @@ SylinderConfig::SylinderConfig(std::string filename) {
 
     bendLinkKappa[0] = bendLinkKappa[1] = bendLinkKappa[2] = 100;
     tribendLinkKappa[0] = tribendLinkKappa[1] = tribendLinkKappa[2] = 100;
-    readConfig(config, VARNAME(bendLinkKappa), bendLinkKappa, 3, "", true);
-    readConfig(config, VARNAME(tribendLinkKappa), tribendLinkKappa, 3, "", true);
+    readVariableConfig(config, VARNAME(bendLinkKappa), bendLinkKappa, 3, "", true);
+    readVariableConfig(config, VARNAME(tribendLinkKappa), tribendLinkKappa, 3, "", true);
 
     preferredCurvature[0] = preferredCurvature[1] = preferredCurvature[2] = 0.0;
-    readConfig(config, VARNAME(preferredCurvature), preferredCurvature, 3, "", true);
+    readVariableConfig(config, VARNAME(preferredCurvature), preferredCurvature, 3, "", true);
 
     sylinderFixed = false;
     readConfig(config, VARNAME(sylinderFixed), sylinderFixed, "", true);
