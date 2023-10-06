@@ -300,7 +300,8 @@ class CalcSylinderNearForce {
 
         const double sep = rnorm - (radI + radJ); // goal of constraint is sep >=0
 
-        if (sep < (radI * spI.colBuf + radJ * spJ.colBuf)) {
+        const double buffer = std::max(spI.colBuf, spJ.colBuf);
+        if (sep < buffer) {
             const Evec3 &Ploc = centerI;
             const Evec3 &Qloc = centerJ;
             collision = true;
