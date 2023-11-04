@@ -1572,7 +1572,7 @@ void SylinderSystem::collectPinLinkBilateral() {
                                                     Evec3(0.0, 0.0, 1.0)};
 
                 // We have three pin constraints, one for each dimension. This properly constrains our system.
-                for (size_t i = 0; i = 3 ; i++)
+                for (size_t i = 0; i < 3 ; i++)
                 {
                     const double delta0 = rvec[i];
                     const double gammaGuess = 0;
