@@ -58,7 +58,7 @@ SylinderConfig::SylinderConfig(std::string filename) {
     readConfig(config, VARNAME(extendLinkGap), extendLinkGap, "", true);
 
     bendLinkKappa[0] = bendLinkKappa[1] = bendLinkKappa[2] = 100;
-    tribendLinkKappa[0] = tribendLinkKappa[1] = tribendLinkKappa[2] = 100;
+    tribendLinkKappa[0] = tribendLinkKappa[1] = tribendLinkKappa[2] = .1;
     readVariableConfig(config, VARNAME(bendLinkKappa), bendLinkKappa, 3, "", true);
     readVariableConfig(config, VARNAME(tribendLinkKappa), tribendLinkKappa, 3, "", true);
 
