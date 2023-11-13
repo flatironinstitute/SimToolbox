@@ -35,6 +35,8 @@ class ConstraintCollector {
     ///< all copy of collector share a pointer to collision pool
     ///< this is required by FDPS
 
+    std::shared_ptr<std::map<int, double>> uniqueSolutionMapPtr;
+
     ConstraintCollector();
 
     /**
@@ -164,6 +166,10 @@ class ConstraintCollector {
      * @return int error code (future)
      */
     int writeBackGamma(const Teuchos::RCP<const TV> &gammaRcp);
+
+
+  void stashSolution(); 
+double fetchGuessFromStashedSolution(int cgid) const; 
 };
 
 #endif

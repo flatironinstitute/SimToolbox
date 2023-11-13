@@ -406,7 +406,13 @@ void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
     auto parseTwoLink = [&](Link &link, const std::string &line) {
         std::stringstream liness(line);
         char header;
-        liness >> header >> link.prev >> link.next;
+        int gidI;
+        int gidJ;
+        int cgid1;
+        int cgid2;
+        int cgid3;
+        liness >> header >> gidI >> gidJ >> cgid1 >> cgid2 >> cgid3;
+        return std::make_tuple(gidI, gidJ, cgid1, cgid2, cgid3);
     };
 
     auto parseThreeLink = [&](const std::string &line) {
@@ -414,10 +420,12 @@ void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
         int gidI; 
         int gidJ; 
         int gidK;
-        char header;
-        liness >> header >> gidI >> gidJ >> gidK;
+        int cgid1;
+        int cgid2;
+        int cgid3;
+        liness >> header >> gidI >> gidJ >> gidK >> cgid1 >> cgid2 >> cgid3;
         assert(header == 'T');
-        return std::make_tuple(gidI, gidJ, gidK);
+        return std::make_tuple(gidI, gidJ, gidK, cgid1, cgid2, cgid3);
     };
 
     std::ifstream myfile(filename);
@@ -434,32 +442,34 @@ void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
     bendLinkReverseMap.clear();
     tribendLinkMap.clear();
     tribendLinkReverseMap.clear();
+    pairsToIgnore.clear();
 
     while (std::getline(myfile, line)) {
         Link link;
         switch (line[0]) {
             case 'P': {
-                parseTwoLink(link, line);
-                pinLinkMap.emplace(link.prev, link.next);
-                pinLinkReverseMap.emplace(link.next, link.prev);
+                auto [gidI, gidJ, cgid1, cgid2, cgid3] = parseTwoLink(line);
+                pairsToIgnore.emplace(gidI, gidJ); // ignored because they are connected at the ends
+                pinLinkMap.emplace(gidI, std::make_tuple(gidJ, cgid1, cgid2, cgid3));
+                pinLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgid1, cgid2, cgid3));
                 break;
             }
             case 'E': {
-                parseTwoLink(link, line);
-                extendLinkMap.emplace(link.prev, link.next);
-                extendLinkReverseMap.emplace(link.next, link.prev);
+                auto [gidI, gidJ, cgid1, cgid2, cgid3] = parseTwoLink(line);
+                extendLinkMap.emplace(gidI, std::make_tuple(gidJ, cgid1, cgid2, cgid3));
+                extendLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgid1, cgid2, cgid3));
                 break;
             }
             case 'B': {
-                parseTwoLink(link, line);
-                bendLinkMap.emplace(link.prev, link.next);
-                bendLinkReverseMap.emplace(link.next, link.prev);
+                auto [gidI, gidJ, cgid1, cgid2, cgid3] = parseTwoLink(line);
+                bendLinkMap.emplace(gidI, std::make_tuple(gidJ, cgid1, cgid2, cgid3));
+                bendLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgid1, cgid2, cgid3));
                 break;
             }
             case 'T': {
-                auto [gidI, gidJ, gidK] = parseThreeLink(line);
-                tribendLinkMap.emplace(gidI, std::make_pair(gidJ, gidK));
-                tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), gidI);
+                auto [gidI, gidJ, gidK, cgid1, cgid2, cgid3] = = parseThreeLink(line);
+                tribendLinkMap.emplace(gidI, std::make_tuple(gidJ, gidK, cgid1, cgid2, cgid3));
+                tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), std::make_tuple(gidI, cgid1, cgid2, cgid3));
             break;
             }
             default:
@@ -569,17 +579,24 @@ void SylinderSystem::writeAscii(const std::string &baseFolder) {
     sylinderContainer.writeParticleAscii(name.c_str(), header);
     if (commRcp->getRank() == 0) {
         FILE *fptr = fopen(name.c_str(), "a");
-        for (const auto &key_value : pinLinkMap) {
-            fprintf(fptr, "P %d %d\n", key_value.first, key_value.second);
+        // for (const auto &key_value : pinLinkMap) {
+        for (const auto& [gidI, neighbor_and_cgids] : pinLinkMap) {
+            const auto& [gidJ, cgid1, cgid2, cgid3] = neighbor_and_cgids;
+            fprintf(fptr, "P %d %d %d %d %d\n", gidI, gidJ, cgid1, cgid2, cgid3);
         }
-        for (const auto &key_value : extendLinkMap) {
-            fprintf(fptr, "E %d %d\n", key_value.first, key_value.second);
+        // for (const auto &key_value : extendLinkMap) {
+        for (const auto& [gidI, neighbor_and_cgids] : extendLinkMap) {
+            const auto& [gidJ, cgid1, cgid2, cgid3] = neighbor_and_cgids;
+            fprintf(fptr, "E %d %d %d %d %d\n", gidI, gidJ, cgid1, cgid2, cgid3);
         }
-        for (const auto &key_value : bendLinkMap) {
-            fprintf(fptr, "B %d %d\n", key_value.first, key_value.second);
+        // for (const auto &key_value : bendLinkMap) {
+        for (const auto& [gidI, neighbor_and_cgids] : bendLinkMap) {
+            const auto& [gidJ, cgid1, cgid2, cgid3] = neighbor_and_cgids;
+            fprintf(fptr, "B %d %d %d %d %d\n", gidI, gidJ, cgid1, cgid2, cgid3);
         }
-        for (const auto &key_value : tribendLinkMap) {
-            fprintf(fptr, "T %d %d %d\n", key_value.first, key_value.second.first, key_value.second.second);
+        for (const auto& [gidI, neighbors_and_cgids] : tribendLinkMap) {
+            const auto& [gidJ, gidK, cgid1, cgid2, cgid3] = neighbors_and_cgids;
+            fprintf(fptr, "T %d %d %d %d %d %d\n", gidI, gidJ, gidK, cgid1, cgid2, cgid3);
         }
         fclose(fptr);
     }
@@ -1007,6 +1024,7 @@ void SylinderSystem::prepareStep() {
 
     calcMobOperator();
 
+    conCollectorPtr->stashSolution();
     conCollectorPtr->clear();
 
     forcePartNonBrownRcp.reset();
@@ -1238,7 +1256,7 @@ void SylinderSystem::collectBoundaryCollision() {
 
 void SylinderSystem::collectPairCollision() {
 
-    CalcSylinderNearForce calcColFtr(conCollectorPtr->constraintPoolPtr, pinLinkMap);
+    CalcSylinderNearForce calcColFtr(conCollectorPtr->constraintPoolPtr, pairsToIgnore);
 
     TEUCHOS_ASSERT(treeSylinderNearPtr);
     const int nLocal = sylinderContainer.getNumberOfParticleLocal();
@@ -1438,7 +1456,7 @@ std::vector<int> SylinderSystem::addNewSylinder(const std::vector<Sylinder> &new
     return newGidRecv;
 }
 
-// DO NOT USE THIS FUNCTION
+// DO NOT USE THIS FUNCTION (currently broken)
 void SylinderSystem::addNewEndLink(const std::vector<Link> &newEndLink) {
     // synchronize newLink to all mpi ranks
     const int newCountLocal = newEndLink.size();
@@ -1452,12 +1470,12 @@ void SylinderSystem::addNewEndLink(const std::vector<Link> &newEndLink) {
 
     // put newLinks into the map, same op on all mpi ranks
     for (const auto &ll : newLinkRecv) {
-        extendLinkMap.emplace(ll.prev, ll.next);
-        extendLinkReverseMap.emplace(ll.next, ll.prev);
+        extendLinkMap.emplace(ll.prev, std::make_tuple(ll.next, GEO_INVALID_INDEX, GEO_INVALID_INDEX, GEO_INVALID_INDEX));
+        extendLinkReverseMap.emplace(ll.next, std::make_tuple(ll.prev, GEO_INVALID_INDEX, GEO_INVALID_INDEX, GEO_INVALID_INDEX));
     }
 }
 
-// DO NOT USE THIS FUNCTION
+// DO NOT USE THIS FUNCTION (currently broken)
 void SylinderSystem::addNewCenterLink(const std::vector<Link> &newCenterLink) {
     // synchronize newLink to all mpi ranks
     const int newCountLocal = newCenterLink.size();
@@ -1471,8 +1489,8 @@ void SylinderSystem::addNewCenterLink(const std::vector<Link> &newCenterLink) {
 
     // put newLinks into the map, same op on all mpi ranks
     for (const auto &ll : newLinkRecv) {
-        bendLinkMap.emplace(ll.prev, ll.next);
-        bendLinkReverseMap.emplace(ll.next, ll.prev);
+        bendLinkMap.emplace(ll.prev, std::make_tuple(ll.next, GEO_INVALID_INDEX, GEO_INVALID_INDEX, GEO_INVALID_INDEX));
+        bendLinkReverseMap.emplace(ll.next, std::make_tuple(ll.prev, GEO_INVALID_INDEX, GEO_INVALID_INDEX, GEO_INVALID_INDEX));
     }
 }
 
@@ -1507,6 +1525,9 @@ void SylinderSystem::collectPinLinkBilateral() {
     const auto &dataToFind = sylinderNearDataDirectoryPtr->dataToFind;
 
     std::vector<int> gidDisp(nLocal + 1, 0);
+    std::vector<int> cgids;
+    cgids.clear();
+    cgids.reserve(3 * nLocal);
     gidToFind.clear();
     gidToFind.reserve(nLocal);
 
@@ -1517,7 +1538,12 @@ void SylinderSystem::collectPinLinkBilateral() {
         const auto &range = pinLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = range.first; it != range.second; it++) {
-            gidToFind.push_back(it->second); // next
+            const auto& [key, neighbor_and_cgids] = *it;
+            const auto& [gidJ, cgid1, cgid2, cgid3] = neighbor_and_cgids;
+            cgids.push_back(cgid1);
+            cgids.push_back(cgid2);
+            cgids.push_back(cgid3);
+            gidToFind.push_back(gidJ); // next
             count++;
         }
         gidDisp[i + 1] = gidDisp[i] + count; // number of links for each local Sylinder
@@ -1534,7 +1560,6 @@ void SylinderSystem::collectPinLinkBilateral() {
             const auto &syI = sylinderContainer[i]; // sylinder
             const int lb = gidDisp[i];
             const int ub = gidDisp[i + 1];
-
             for (int j = lb; j < ub; j++) {
                 const auto &syJ = sylinderNearDataDirectoryPtr->dataToFind[j]; // sylinderNear
 
@@ -1575,7 +1600,7 @@ void SylinderSystem::collectPinLinkBilateral() {
                 for (size_t i = 0; i < 3 ; i++)
                 {
                     const double delta0 = rvec[i];
-                    const double gammaGuess = 0;
+                    const double gammaGuess = conCollectorPtr->fetchGuessFromStashedSolution(cgids[3 * j + i]);
                     const Evec3 unscaledForceComI = normIVec[i];
                     const Evec3 unscaledForceComJ = -unscaledForceComI;
                     const Evec3 unscaledTorqueComI = posI.cross(unscaledForceComI);
@@ -1780,6 +1805,7 @@ void SylinderSystem::collectBendLinkBilateral() {
                 // We have three bending constraints.
                 // They correspond to the satisfaction of kappa_i - kappa_0i - lambda_i / b_i along the triad of directors at the node connecting the two rods.
                 // In our case, the triad is uniquely described by the unit quaternion associated with each rod segment. To find the average quaternion at the center of the two nodes, we use slerp. 
+                // 
                 const auto equatI = ECmapq(syI.orientation);
                 const auto equatJ = ECmapq(syJ.orientation);
                 const auto equatIJ = equatI.slerp(0.5, equatJ).normalized();

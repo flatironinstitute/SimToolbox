@@ -37,6 +37,7 @@ struct ConstraintBlock {
     int globalIndexI = GEO_INVALID_INDEX; ///< global index of particle I
     int globalIndexJ = GEO_INVALID_INDEX; ///< global index of particle J
     int globalIndexK = GEO_INVALID_INDEX; ///< global index of particle K
+    int gcid = GEO_INVALID_INDEX;         ///< unique global ID of constraint
     bool oneSide = false;                 ///< flag for one side constraint. body J does not appear in mobility matrix
     bool bilateral = false;               ///< if this is a bilateral constraint or not
     double kappa = 0;                     ///< spring constant. =0 means no spring
@@ -86,9 +87,10 @@ struct ConstraintBlock {
      */
     ConstraintBlock(double delta0_, double gamma_, int gidI_, int gidJ_, int globalIndexI_, int globalIndexJ_,
                     const double unscaledForceComI_[3], const double unscaledForceComJ_[3], const double unscaledTorqueComI_[3], const double unscaledTorqueComJ_[3],
-                    const double labI_[3], const double labJ_[3], bool oneSide_, bool bilateral_, double kappa_)
+                    const double labI_[3], const double labJ_[3], bool oneSide_, bool bilateral_, double kappa_, 
+                    int gcid_ = GEO_INVALID_INDEX)
         : delta0(delta0_), gamma(gamma_), gidI(gidI_), gidJ(gidJ_), globalIndexI(globalIndexI_),
-          globalIndexJ(globalIndexJ_), oneSide(oneSide_), bilateral(bilateral_), kappa(kappa_) {
+          globalIndexJ(globalIndexJ_), oneSide(oneSide_), bilateral(bilateral_), kappa(kappa_), gcid(gcid_) {
         for (int d = 0; d < 3; d++) {
             unscaledForceComI[d] = unscaledForceComI_[d];
             unscaledForceComJ[d] = unscaledForceComJ_[d];
@@ -103,11 +105,11 @@ struct ConstraintBlock {
     ConstraintBlock(double delta0_, double gamma_, int gidI_, int gidJ_, int gidK_, int globalIndexI_, int globalIndexJ_, int globalIndexK_,
                     const double unscaledForceComI_[3], const double unscaledForceComJ_[3], const double unscaledForceComK_[3], 
                     const double unscaledTorqueComI_[3], const double unscaledTorqueComJ_[3], const double unscaledTorqueComK_[3],
-                    const double labI_[3], const double labJ_[3], const double labK_[3], bool oneSide_, bool bilateral_, double kappa_)
+                    const double labI_[3], const double labJ_[3], const double labK_[3], bool oneSide_, bool bilateral_, double kappa_, int gcid_ = GEO_INVALID_INDEX)
         : delta0(delta0_), gamma(gamma_), 
         gidI(gidI_), gidJ(gidJ_), gidK(gidK_), 
         globalIndexI(globalIndexI_), globalIndexJ(globalIndexJ_), globalIndexK(globalIndexK_),
-        oneSide(oneSide_), bilateral(bilateral_), kappa(kappa_) {
+        oneSide(oneSide_), bilateral(bilateral_), kappa(kappa_), gcid(gcid_) {
         for (int d = 0; d < 3; d++) {
             unscaledForceComI[d] = unscaledForceComI_[d];
             unscaledForceComJ[d] = unscaledForceComJ_[d];

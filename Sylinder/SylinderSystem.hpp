@@ -51,18 +51,19 @@ class SylinderSystem {
     int treeSylinderNumber;                                ///< the current max_glb number of treeSylinderNear
     void setTreeSylinder();
 
-    std::unordered_multimap<int, int> pinLinkMap;        ///< links prev,next
-    std::unordered_multimap<int, int> pinLinkReverseMap; ///< links next, prev
-    std::unordered_multimap<int, int> extendLinkMap;        ///< links prev,next
-    std::unordered_multimap<int, int> extendLinkReverseMap; ///< links next, prev
-    std::unordered_multimap<int, int> bendLinkMap;        ///< links prev,next
-    std::unordered_multimap<int, int> bendLinkReverseMap; ///< links next, prev
-    std::unordered_multimap<int, std::pair<int,int>> tribendLinkMap;         ///< links center, (left, right)
-    std::unordered_multimap<std::pair<int,int>, int, PairHash> tribendLinkReverseMap;  ///< links (left, right), center, 
+    std::unordered_multimap<int, std::tuple<int, int, int,int> pinLinkMap;           ///< links prev -> next,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int,int> pinLinkReverseMap;    ///< links next -> prev,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int,int> extendLinkMap;        ///< links prev -> next,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int,int> extendLinkReverseMap; ///< links next -> prev,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int,int> bendLinkMap;          ///< links prev -> next,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int,int> bendLinkReverseMap;   ///< links next -> prev,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::pair<int,int>> tribendLinkMap;          ///< links center -> left,right,cgid1,cgid2,cgid3
+    std::unordered_multimap<std::pair<int,int>, std::tuple<int, int, int, int>, PairHash> tribendLinkReverseMap; ///< links (left, right) -> center,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, int> pairsToIgnore:
 
     // Constraint stuff
     std::shared_ptr<ConstraintSolver> conSolverPtr;       ///< pointer to ConstraintSolver
-    std::shared_ptr<ConstraintCollector> conCollectorPtr; ///<  pointer to ConstraintCollector
+    std::shared_ptr<ConstraintCollector> conCollectorPtr; ///< pointer to ConstraintCollector
     Teuchos::RCP<const TV> forceUniRcp;                   ///< unilateral constraint force
     Teuchos::RCP<const TV> velocityUniRcp;                ///< unilateral constraint velocity
     Teuchos::RCP<const TV> forceBiRcp;                    ///< bilateral constraint force

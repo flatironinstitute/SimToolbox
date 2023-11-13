@@ -472,3 +472,38 @@ int ConstraintCollector::writeBackGamma(const Teuchos::RCP<const TV> &gammaRcp) 
 
     return 0;
 }
+
+void ConstraintCollector::stashSolution() {
+    // Map from uniquely identifiable constraints to their solutions
+    // The key is the constraint's cgid. The value is the solution.
+    // If the cgid of a constraint is GEO_INVALID_INDEX, it is not included in the map.
+    const auto &conPool = *constraintPoolPtr;
+    const int poolSize = conPool.size();
+
+    // multi-thread filling. nThreads = poolSize, each thread process a queue
+    std::vector<std::map<int, double>> privateMaps(poolSize);
+
+#pragma omp parallel for num_threads(poolSize)
+    for (int threadId = 0; threadId < poolSize; threadId++) {
+        for (const auto &c : conPool[threadId]) {
+            if (c.gcid != GEO_INVALID_INDEX) {
+                privateMaps[threadId][c.gcid] = c.gamma;
+            }
+        }
+    }
+
+    uniqueSolutionMapPtr = std::make_shared<std::map<int, double>>();
+    for (const auto &m : privateMaps) {
+        uniqueSolutionMapPtr->insert(m.begin(), m.end());
+    }
+}
+
+double ConstraintCollector::fetchGuessFromStashedSolution(int cgid) const {
+    if ((cgid != GEO_INVALID_INDEX) && uniqueSolutionMapPtr) {
+        auto it = uniqueSolutionMapPtr->find(cgid);
+        if (it != uniqueSolutionMapPtr->end()) {
+            return it->second;
+        }
+    }
+    return 0;
+}
