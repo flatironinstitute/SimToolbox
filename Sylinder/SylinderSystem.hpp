@@ -51,10 +51,10 @@ class SylinderSystem {
     int treeSylinderNumber;                                ///< the current max_glb number of treeSylinderNear
     void setTreeSylinder();
 
+    std::unordered_multimap<int, std::tuple<int, int>> extendLinkMap;                  ///< links prev -> next, cgid
+    std::unordered_multimap<int, std::tuple<int, int>> extendLinkReverseMap;           ///< links next -> prev, cgid
     std::unordered_multimap<int, std::tuple<int, int, int, int>> pinLinkMap;           ///< links prev -> next,cgid1,cgid2,cgid3
     std::unordered_multimap<int, std::tuple<int, int, int, int>> pinLinkReverseMap;    ///< links next -> prev,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, std::tuple<int, int, int, int>> extendLinkMap;        ///< links prev -> next,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, std::tuple<int, int, int, int>> extendLinkReverseMap; ///< links next -> prev,cgid1,cgid2,cgid3
     std::unordered_multimap<int, std::tuple<int, int, int, int>> bendLinkMap;          ///< links prev -> next,cgid1,cgid2,cgid3
     std::unordered_multimap<int, std::tuple<int, int, int, int>> bendLinkReverseMap;   ///< links next -> prev,cgid1,cgid2,cgid3
     std::unordered_multimap<int, std::tuple<int, int, int, int, int>> tribendLinkMap;          ///< links center -> left,right,cgid1,cgid2,cgid3
@@ -299,8 +299,8 @@ class SylinderSystem {
 
     const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getPinLinkMap() { return pinLinkMap; }
     const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getPinLinkReverseMap() { return pinLinkReverseMap; }
-    const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getExtendLinkMap() { return extendLinkMap; }
-    const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getExtendLinkReverseMap() { return extendLinkReverseMap; }
+    const std::unordered_multimap<int, std::tuple<int, int>> &getExtendLinkMap() { return extendLinkMap; }
+    const std::unordered_multimap<int, std::tuple<int, int>> &getExtendLinkReverseMap() { return extendLinkReverseMap; }
     const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getbendLinkMap() { return bendLinkMap; }
     const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getbendLinkReverseMap() { return bendLinkReverseMap; }
     const std::unordered_multimap<int, std::tuple<int, int, int, int, int>> &getTriLinkMap() { return tribendLinkMap; }
@@ -382,8 +382,8 @@ class SylinderSystem {
      *
      * @param newLink
      */
-    void addNewEndLink(const std::vector<Link> &newEndLink);
-    void addNewCenterLink(const std::vector<Link> &newCenterLink);
+    void addNewExtendLink(const std::vector<Link> &newExtendLink);
+    void addNewBendLink(const std::vector<Link> &newBendLink);
 
     /**
      * @brief calculate both Col and Bi stress

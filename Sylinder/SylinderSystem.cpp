@@ -403,32 +403,6 @@ void SylinderSystem::setInitialFromFile(const std::string &filename) {
 void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
     spdlog::warn("Reading file " + filename);
 
-    auto parseTwoLink = [&](const std::string &line) {
-        std::stringstream liness(line);
-        char header;
-        int gidI;
-        int gidJ;
-        int cgid1;
-        int cgid2;
-        int cgid3;
-        liness >> header >> gidI >> gidJ >> cgid1 >> cgid2 >> cgid3;
-        return std::make_tuple(gidI, gidJ, cgid1, cgid2, cgid3);
-    };
-
-    auto parseThreeLink = [&](const std::string &line) {
-        std::stringstream liness(line);
-        char header;
-        int gidI; 
-        int gidJ; 
-        int gidK;
-        int cgid1;
-        int cgid2;
-        int cgid3;
-        liness >> header >> gidI >> gidJ >> gidK >> cgid1 >> cgid2 >> cgid3;
-        assert(header == 'T');
-        return std::make_tuple(gidI, gidJ, gidK, cgid1, cgid2, cgid3);
-    };
-
     std::ifstream myfile(filename);
     std::string line;
     std::getline(myfile, line); // read two header lines
@@ -449,28 +423,41 @@ void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
         Link link;
         switch (line[0]) {
             case 'P': {
-                auto [gidI, gidJ, cgid1, cgid2, cgid3] = parseTwoLink(line);
+                // auto tmp = parseLinkString(line);
+                int gidI = line[1];
+                int gidJ = line[2];
+                std::vector<int>  cgids = {line[3], line[4], line[5]};
                 pairsToIgnore.emplace(gidI, gidJ); // ignored because they are connected at the ends
-                pinLinkMap.emplace(gidI, std::make_tuple(gidJ, cgid1, cgid2, cgid3));
-                pinLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgid1, cgid2, cgid3));
+                pinLinkMap.emplace(gidI, std::make_tuple(gidJ, cgids[0], cgids[1], cgids[2]));
+                pinLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgids[0], cgids[1], cgids[2]));
                 break;
             }
             case 'E': {
-                auto [gidI, gidJ, cgid1, cgid2, cgid3] = parseTwoLink(line);
-                extendLinkMap.emplace(gidI, std::make_tuple(gidJ, cgid1, cgid2, cgid3));
-                extendLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgid1, cgid2, cgid3));
+                int gidI = line[1];
+                int gidJ = line[2];
+                int cgid = line[3];
+                if (runConfig.ignoreLinkCollision) {
+                    pairsToIgnore.emplace(gidI, gidJ); // ignored because they are connected at the ends
+                }
+                extendLinkMap.emplace(gidI, std::make_tuple(gidJ, cgid));
+                extendLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgid));
                 break;
             }
             case 'B': {
-                auto [gidI, gidJ, cgid1, cgid2, cgid3] = parseTwoLink(line);
-                bendLinkMap.emplace(gidI, std::make_tuple(gidJ, cgid1, cgid2, cgid3));
-                bendLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgid1, cgid2, cgid3));
+                int gidI = line[1];
+                int gidJ = line[2];
+                std::vector<int>  cgids = {line[3], line[4], line[5]};
+                bendLinkMap.emplace(gidI, std::make_tuple(gidJ, cgids[0], cgids[1], cgids[2]));
+                bendLinkReverseMap.emplace(gidJ, std::make_tuple(gidI, cgids[0], cgids[1], cgids[2]));
                 break;
             }
             case 'T': {
-                auto [gidI, gidJ, gidK, cgid1, cgid2, cgid3] = parseThreeLink(line);
-                tribendLinkMap.emplace(gidI, std::make_tuple(gidJ, gidK, cgid1, cgid2, cgid3));
-                tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), std::make_tuple(gidI, cgid1, cgid2, cgid3));
+                int gidI = line[1];
+                int gidJ = line[2];
+                int gidK = line[3];
+                std::vector<int>  cgids = {line[4], line[5], line[6]};
+                tribendLinkMap.emplace(gidI, std::make_tuple(gidJ, gidK, cgids[0], cgids[1], cgids[2]));
+                tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), std::make_tuple(gidI, cgids[0], cgids[1], cgids[2]));
             break;
             }
             default:
@@ -580,17 +567,14 @@ void SylinderSystem::writeAscii(const std::string &baseFolder) {
     sylinderContainer.writeParticleAscii(name.c_str(), header);
     if (commRcp->getRank() == 0) {
         FILE *fptr = fopen(name.c_str(), "a");
-        // for (const auto &key_value : pinLinkMap) {
+        for (const auto& [gidI, neighbor_and_cgids] : extendLinkMap) {
+            const auto& [gidJ, cgid] = neighbor_and_cgids;
+            fprintf(fptr, "E %d %d %d \n", gidI, gidJ, cgid);
+        }
         for (const auto& [gidI, neighbor_and_cgids] : pinLinkMap) {
             const auto& [gidJ, cgid1, cgid2, cgid3] = neighbor_and_cgids;
             fprintf(fptr, "P %d %d %d %d %d\n", gidI, gidJ, cgid1, cgid2, cgid3);
         }
-        // for (const auto &key_value : extendLinkMap) {
-        for (const auto& [gidI, neighbor_and_cgids] : extendLinkMap) {
-            const auto& [gidJ, cgid1, cgid2, cgid3] = neighbor_and_cgids;
-            fprintf(fptr, "E %d %d %d %d %d\n", gidI, gidJ, cgid1, cgid2, cgid3);
-        }
-        // for (const auto &key_value : bendLinkMap) {
         for (const auto& [gidI, neighbor_and_cgids] : bendLinkMap) {
             const auto& [gidJ, cgid1, cgid2, cgid3] = neighbor_and_cgids;
             fprintf(fptr, "B %d %d %d %d %d\n", gidI, gidJ, cgid1, cgid2, cgid3);
@@ -1458,34 +1442,34 @@ std::vector<int> SylinderSystem::addNewSylinder(const std::vector<Sylinder> &new
 }
 
 // DO NOT USE THIS FUNCTION (currently broken)
-void SylinderSystem::addNewEndLink(const std::vector<Link> &newEndLink) {
+void SylinderSystem::addNewExtendLink(const std::vector<Link> &newExtendLink) {
     // synchronize newLink to all mpi ranks
-    const int newCountLocal = newEndLink.size();
+    const int newCountLocal = newExtendLink.size();
     std::vector<int> newCount(commRcp->getSize(), 0);
     MPI_Allgather(&newCountLocal, 1, MPI_INT, newCount.data(), 1, MPI_INT, MPI_COMM_WORLD);
     std::vector<int> displ(commRcp->getSize() + 1, 0);
     std::partial_sum(newCount.cbegin(), newCount.cend(), displ.begin() + 1);
     std::vector<Link> newLinkRecv(displ.back());
-    MPI_Allgatherv(newEndLink.data(), newCountLocal, createMPIStructType<Link>(), newLinkRecv.data(), newCount.data(),
+    MPI_Allgatherv(newExtendLink.data(), newCountLocal, createMPIStructType<Link>(), newLinkRecv.data(), newCount.data(),
                    displ.data(), createMPIStructType<Link>(), MPI_COMM_WORLD);
 
     // put newLinks into the map, same op on all mpi ranks
     for (const auto &ll : newLinkRecv) {
-        extendLinkMap.emplace(ll.prev, std::make_tuple(ll.next, GEO_INVALID_INDEX, GEO_INVALID_INDEX, GEO_INVALID_INDEX));
-        extendLinkReverseMap.emplace(ll.next, std::make_tuple(ll.prev, GEO_INVALID_INDEX, GEO_INVALID_INDEX, GEO_INVALID_INDEX));
+        extendLinkMap.emplace(ll.prev, std::make_tuple(ll.next, GEO_INVALID_INDEX));
+        extendLinkReverseMap.emplace(ll.next, std::make_tuple(ll.prev, GEO_INVALID_INDEX));
     }
 }
 
 // DO NOT USE THIS FUNCTION (currently broken)
-void SylinderSystem::addNewCenterLink(const std::vector<Link> &newCenterLink) {
+void SylinderSystem::addNewBendLink(const std::vector<Link> &newBendLink) {
     // synchronize newLink to all mpi ranks
-    const int newCountLocal = newCenterLink.size();
+    const int newCountLocal = newBendLink.size();
     std::vector<int> newCount(commRcp->getSize(), 0);
     MPI_Allgather(&newCountLocal, 1, MPI_INT, newCount.data(), 1, MPI_INT, MPI_COMM_WORLD);
     std::vector<int> displ(commRcp->getSize() + 1, 0);
     std::partial_sum(newCount.cbegin(), newCount.cend(), displ.begin() + 1);
     std::vector<Link> newLinkRecv(displ.back());
-    MPI_Allgatherv(newCenterLink.data(), newCountLocal, createMPIStructType<Link>(), newLinkRecv.data(), newCount.data(),
+    MPI_Allgatherv(newBendLink.data(), newCountLocal, createMPIStructType<Link>(), newLinkRecv.data(), newCount.data(),
                    displ.data(), createMPIStructType<Link>(), MPI_COMM_WORLD);
 
     // put newLinks into the map, same op on all mpi ranks
@@ -1534,7 +1518,7 @@ void SylinderSystem::collectPinLinkBilateral() {
     cgids.reserve(3 * nLocal);
 
     // loop over all sylinders
-    // if endLinkMap[sy.gid] not empty, find info for all next
+    // if pinLinkMap[sy.gid] not empty, find info for all next
     for (int i = 0; i < nLocal; i++) {
         const auto &sy = sylinderContainer[i];
         const auto &range = pinLinkMap.equal_range(sy.gid);
@@ -1641,7 +1625,7 @@ void SylinderSystem::collectExtendLinkBilateral() {
 
     std::vector<int> cgids;
     cgids.clear();
-    cgids.reserve(3 * nLocal);
+    cgids.reserve(nLocal);
 
     std::vector<int> gidDisp(nLocal + 1, 0);
 
@@ -1653,8 +1637,8 @@ void SylinderSystem::collectExtendLinkBilateral() {
         const auto &range = extendLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = range.first; it != range.second; it++) {
-            const auto& [gidJ, cgid1, cgid2, cgid3] = it->second;
-            cgids.insert(cgids.end(), {cgid1, cgid2, cgid3});
+            const auto& [gidJ, cgid] = it->second;
+            cgids.push_back(cgid);
             gidToFind.push_back(gidJ); 
             count++;
         }
@@ -1707,7 +1691,7 @@ void SylinderSystem::collectExtendLinkBilateral() {
                 // const double gamma = delta0 < 0 ? -delta0 : 0;
 
                 //TODO This might be wrong since this constraint only has one gamma
-                const double gammaGuess = conCollectorPtr->fetchGuessFromStashedSolution(cgids[3 * j]);
+                const double gammaGuess = conCollectorPtr->fetchGuessFromStashedSolution(cgids[j]);
                 const Evec3 normI = (Ploc - Qloc).normalized();
                 const Evec3 normJ = -normI;
                 const Evec3 posI = Ploc - centerI;

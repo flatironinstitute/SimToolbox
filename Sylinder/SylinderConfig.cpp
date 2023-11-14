@@ -52,6 +52,9 @@ SylinderConfig::SylinderConfig(std::string filename) {
     initPreSteps = 100;
     readConfig(config, VARNAME(initPreSteps), initPreSteps, "", true);
 
+    ignoreLinkCollision = false;
+    readConfig(config, VARNAME(ignoreLinkCollision), ignoreLinkCollision, "", true);
+
     extendLinkKappa = 100;
     extendLinkGap = .0001; // TODO Will want to make sure this is a good default
     readConfig(config, VARNAME(extendLinkKappa), extendLinkKappa, "", true);
