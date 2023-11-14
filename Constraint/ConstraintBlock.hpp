@@ -68,26 +68,13 @@ struct ConstraintBlock {
     /**
      * @brief Construct a new ConstraintBlock object
      *
-     * @param delta0_ current value of the constraint function
-     * @param gamma_
-     * @param gidI_
-     * @param gidJ_
-     * @param globalIndexI_
-     * @param globalIndexJ_
-     * @param normI_
-     * @param normJ_
-     * @param posI_
-     * @param posJ_
-     * @param labI_
-     * @param labJ_
-     * @param oneSide_ flag for one side constarint
-     * @param bilateral_ flag for bilateral constraint
-     * @param kappa_ flag for kappa of bilateral constraint
-     * @param gammaLB_ lower bound of gamma for unilateral constraints
      */
-    ConstraintBlock(double delta0_, double gamma_, int gidI_, int gidJ_, int globalIndexI_, int globalIndexJ_,
-                    const double unscaledForceComI_[3], const double unscaledForceComJ_[3], const double unscaledTorqueComI_[3], const double unscaledTorqueComJ_[3],
-                    const double labI_[3], const double labJ_[3], bool oneSide_, bool bilateral_, double kappa_, 
+    ConstraintBlock(double delta0_, double gamma_, 
+                    int gidI_, int gidJ_, int globalIndexI_, int globalIndexJ_,
+                    const double unscaledForceComI_[3], const double unscaledForceComJ_[3], 
+                    const double unscaledTorqueComI_[3], const double unscaledTorqueComJ_[3],
+                    const double labI_[3], const double labJ_[3], 
+                    bool oneSide_, bool bilateral_, double kappa_, 
                     int gcid_ = GEO_INVALID_INDEX)
         : delta0(delta0_), gamma(gamma_), gidI(gidI_), gidJ(gidJ_), globalIndexI(globalIndexI_),
           globalIndexJ(globalIndexJ_), oneSide(oneSide_), bilateral(bilateral_), kappa(kappa_), gcid(gcid_) {
@@ -102,10 +89,18 @@ struct ConstraintBlock {
         std::fill(stress, stress + 9, 0);
     }
 
-    ConstraintBlock(double delta0_, double gamma_, int gidI_, int gidJ_, int gidK_, int globalIndexI_, int globalIndexJ_, int globalIndexK_,
+    /**
+     * @brief Construct a new ConstraintBlock object
+     *
+     */
+    ConstraintBlock(double delta0_, double gamma_, 
+                    int gidI_, int gidJ_, int gidK_, 
+                    int globalIndexI_, int globalIndexJ_, int globalIndexK_,
                     const double unscaledForceComI_[3], const double unscaledForceComJ_[3], const double unscaledForceComK_[3], 
                     const double unscaledTorqueComI_[3], const double unscaledTorqueComJ_[3], const double unscaledTorqueComK_[3],
-                    const double labI_[3], const double labJ_[3], const double labK_[3], bool oneSide_, bool bilateral_, double kappa_, int gcid_ = GEO_INVALID_INDEX)
+                    const double labI_[3], const double labJ_[3], const double labK_[3], 
+                    bool oneSide_, bool bilateral_, double kappa_, 
+                    int gcid_ = GEO_INVALID_INDEX)
         : delta0(delta0_), gamma(gamma_), 
         gidI(gidI_), gidJ(gidJ_), gidK(gidK_), 
         globalIndexI(globalIndexI_), globalIndexJ(globalIndexJ_), globalIndexK(globalIndexK_),

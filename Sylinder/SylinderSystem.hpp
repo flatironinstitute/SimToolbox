@@ -51,15 +51,15 @@ class SylinderSystem {
     int treeSylinderNumber;                                ///< the current max_glb number of treeSylinderNear
     void setTreeSylinder();
 
-    std::unordered_multimap<int, std::tuple<int, int, int,int> pinLinkMap;           ///< links prev -> next,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, std::tuple<int, int, int,int> pinLinkReverseMap;    ///< links next -> prev,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, std::tuple<int, int, int,int> extendLinkMap;        ///< links prev -> next,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, std::tuple<int, int, int,int> extendLinkReverseMap; ///< links next -> prev,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, std::tuple<int, int, int,int> bendLinkMap;          ///< links prev -> next,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, std::tuple<int, int, int,int> bendLinkReverseMap;   ///< links next -> prev,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, std::pair<int,int>> tribendLinkMap;          ///< links center -> left,right,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int, int>> pinLinkMap;           ///< links prev -> next,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int, int>> pinLinkReverseMap;    ///< links next -> prev,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int, int>> extendLinkMap;        ///< links prev -> next,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int, int>> extendLinkReverseMap; ///< links next -> prev,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int, int>> bendLinkMap;          ///< links prev -> next,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int, int>> bendLinkReverseMap;   ///< links next -> prev,cgid1,cgid2,cgid3
+    std::unordered_multimap<int, std::tuple<int, int, int, int, int>> tribendLinkMap;          ///< links center -> left,right,cgid1,cgid2,cgid3
     std::unordered_multimap<std::pair<int,int>, std::tuple<int, int, int, int>, PairHash> tribendLinkReverseMap; ///< links (left, right) -> center,cgid1,cgid2,cgid3
-    std::unordered_multimap<int, int> pairsToIgnore:
+    std::unordered_multimap<int, int> pairsToIgnore;
 
     // Constraint stuff
     std::shared_ptr<ConstraintSolver> conSolverPtr;       ///< pointer to ConstraintSolver
@@ -297,14 +297,14 @@ class SylinderSystem {
     const PS::DomainInfo &getDomainInfo() { return dinfo; }
     PS::DomainInfo &getDomainInfoNonConst() { return dinfo; }
 
-    const std::unordered_multimap<int, int> &getPinLinkMap() { return pinLinkMap; }
-    const std::unordered_multimap<int, int> &getPinLinkReverseMap() { return pinLinkReverseMap; }
-    const std::unordered_multimap<int, int> &getExtendLinkMap() { return extendLinkMap; }
-    const std::unordered_multimap<int, int> &getExtendLinkReverseMap() { return extendLinkReverseMap; }
-    const std::unordered_multimap<int, int> &getbendLinkMap() { return bendLinkMap; }
-    const std::unordered_multimap<int, int> &getbendLinkReverseMap() { return bendLinkReverseMap; }
-    const std::unordered_multimap<int, std::pair<int,int>> &getTriLinkMap() { return tribendLinkMap; }
-    const std::unordered_multimap<std::pair<int,int>, int, PairHash> &getTriLinkReverseMap() { return tribendLinkReverseMap; }
+    const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getPinLinkMap() { return pinLinkMap; }
+    const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getPinLinkReverseMap() { return pinLinkReverseMap; }
+    const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getExtendLinkMap() { return extendLinkMap; }
+    const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getExtendLinkReverseMap() { return extendLinkReverseMap; }
+    const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getbendLinkMap() { return bendLinkMap; }
+    const std::unordered_multimap<int, std::tuple<int, int, int, int>> &getbendLinkReverseMap() { return bendLinkReverseMap; }
+    const std::unordered_multimap<int, std::tuple<int, int, int, int, int>> &getTriLinkMap() { return tribendLinkMap; }
+    const std::unordered_multimap<std::pair<int,int>, std::tuple<int, int, int, int>, PairHash> &getTriLinkReverseMap() { return tribendLinkReverseMap; }
 
     /**
      * @brief Get the RngPoolPtr object

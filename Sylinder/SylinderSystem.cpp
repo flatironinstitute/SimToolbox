@@ -403,7 +403,7 @@ void SylinderSystem::setInitialFromFile(const std::string &filename) {
 void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
     spdlog::warn("Reading file " + filename);
 
-    auto parseTwoLink = [&](Link &link, const std::string &line) {
+    auto parseTwoLink = [&](const std::string &line) {
         std::stringstream liness(line);
         char header;
         int gidI;
@@ -417,6 +417,7 @@ void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
 
     auto parseThreeLink = [&](const std::string &line) {
         std::stringstream liness(line);
+        char header;
         int gidI; 
         int gidJ; 
         int gidK;
@@ -467,7 +468,7 @@ void SylinderSystem::setLinkMapsFromFile(const std::string &filename) {
                 break;
             }
             case 'T': {
-                auto [gidI, gidJ, gidK, cgid1, cgid2, cgid3] = = parseThreeLink(line);
+                auto [gidI, gidJ, gidK, cgid1, cgid2, cgid3] = parseThreeLink(line);
                 tribendLinkMap.emplace(gidI, std::make_tuple(gidJ, gidK, cgid1, cgid2, cgid3));
                 tribendLinkReverseMap.emplace(std::make_pair(gidJ, gidK), std::make_tuple(gidI, cgid1, cgid2, cgid3));
             break;
@@ -1522,14 +1523,15 @@ void SylinderSystem::collectPinLinkBilateral() {
 
     // fill the data to find
     auto &gidToFind = sylinderNearDataDirectoryPtr->gidToFind;
-    const auto &dataToFind = sylinderNearDataDirectoryPtr->dataToFind;
+    gidToFind.clear();
+    gidToFind.reserve(nLocal);
+
 
     std::vector<int> gidDisp(nLocal + 1, 0);
+
     std::vector<int> cgids;
     cgids.clear();
     cgids.reserve(3 * nLocal);
-    gidToFind.clear();
-    gidToFind.reserve(nLocal);
 
     // loop over all sylinders
     // if endLinkMap[sy.gid] not empty, find info for all next
@@ -1538,11 +1540,8 @@ void SylinderSystem::collectPinLinkBilateral() {
         const auto &range = pinLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = range.first; it != range.second; it++) {
-            const auto& [key, neighbor_and_cgids] = *it;
-            const auto& [gidJ, cgid1, cgid2, cgid3] = neighbor_and_cgids;
-            cgids.push_back(cgid1);
-            cgids.push_back(cgid2);
-            cgids.push_back(cgid3);
+            const auto& [gidJ, cgid1, cgid2, cgid3] = it->second;
+            cgids.insert(cgids.end(), {cgid1, cgid2, cgid3});
             gidToFind.push_back(gidJ); // next
             count++;
         }
@@ -1597,10 +1596,10 @@ void SylinderSystem::collectPinLinkBilateral() {
                                                     Evec3(0.0, 0.0, 1.0)};
 
                 // We have three pin constraints, one for each dimension. This properly constrains our system.
-                for (size_t i = 0; i < 3 ; i++)
+                for (size_t k = 0; k < 3 ; k++)
                 {
-                    const double delta0 = rvec[i];
-                    const double gammaGuess = conCollectorPtr->fetchGuessFromStashedSolution(cgids[3 * j + i]);
+                    const double delta0 = rvec[k];
+                    const double gammaGuess = conCollectorPtr->fetchGuessFromStashedSolution(cgids[3 * j + k]);
                     const Evec3 unscaledForceComI = normIVec[i];
                     const Evec3 unscaledForceComJ = -unscaledForceComI;
                     const Evec3 unscaledTorqueComI = posI.cross(unscaledForceComI);
@@ -1637,11 +1636,15 @@ void SylinderSystem::collectExtendLinkBilateral() {
 
     // fill the data to find
     auto &gidToFind = sylinderNearDataDirectoryPtr->gidToFind;
-    const auto &dataToFind = sylinderNearDataDirectoryPtr->dataToFind;
-
-    std::vector<int> gidDisp(nLocal + 1, 0);
     gidToFind.clear();
     gidToFind.reserve(nLocal);
+
+    std::vector<int> cgids;
+    cgids.clear();
+    cgids.reserve(3 * nLocal);
+
+    std::vector<int> gidDisp(nLocal + 1, 0);
+
 
     // loop over all sylinders
     // if extendlinkMap[sy.gid] not empty, find info for all next
@@ -1650,7 +1653,9 @@ void SylinderSystem::collectExtendLinkBilateral() {
         const auto &range = extendLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = range.first; it != range.second; it++) {
-            gidToFind.push_back(it->second); // next
+            const auto& [gidJ, cgid1, cgid2, cgid3] = it->second;
+            cgids.insert(cgids.end(), {cgid1, cgid2, cgid3});
+            gidToFind.push_back(gidJ); 
             count++;
         }
         gidDisp[i + 1] = gidDisp[i] + count; // number of links for each local Sylinder
@@ -1699,7 +1704,10 @@ void SylinderSystem::collectExtendLinkBilateral() {
                 const Evec3 rvec = Qloc - Ploc;
                 
                 const double delta0 = rvec.norm() - syI.radius - syJ.radius - runConfig.extendLinkGap;
-                const double gamma = delta0 < 0 ? -delta0 : 0;
+                // const double gamma = delta0 < 0 ? -delta0 : 0;
+
+                //TODO This might be wrong since this constraint only has one gamma
+                const double gammaGuess = conCollectorPtr->fetchGuessFromStashedSolution(cgids[3 * j]);
                 const Evec3 normI = (Ploc - Qloc).normalized();
                 const Evec3 normJ = -normI;
                 const Evec3 posI = Ploc - centerI;
@@ -1709,7 +1717,7 @@ void SylinderSystem::collectExtendLinkBilateral() {
                 const Evec3 unscaledTorqueComI = posI.cross(unscaledForceComI);
                 const Evec3 unscaledTorqueComJ = posJ.cross(unscaledForceComJ);
 
-                ConstraintBlock conBlock(delta0, gamma,              // current separation, initial guess of gamma
+                ConstraintBlock conBlock(delta0, gammaGuess,              // current separation, initial guess of gamma
                                          syI.gid, syJ.gid,           //
                                          syI.globalIndex,            //
                                          syJ.globalIndex,            //
@@ -1742,9 +1750,13 @@ void SylinderSystem::collectBendLinkBilateral() {
 
     // fill the data to find
     auto &gidToFind = sylinderNearDataDirectoryPtr->gidToFind;
-    const auto &dataToFind = sylinderNearDataDirectoryPtr->dataToFind;
 
     std::vector<int> gidDisp(nLocal + 1, 0);
+
+    std::vector<int> cgids;
+    cgids.clear();
+    cgids.reserve(3 * nLocal);
+
     gidToFind.clear();
     gidToFind.reserve(nLocal);
 
@@ -1755,7 +1767,9 @@ void SylinderSystem::collectBendLinkBilateral() {
         const auto &range = bendLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = range.first; it != range.second; it++) {
-            gidToFind.push_back(it->second); // next
+            const auto& [gidJ, cgid1, cgid2, cgid3] = it->second;
+            cgids.insert(cgids.end(), {cgid1, cgid2, cgid3});
+            gidToFind.push_back(gidJ); 
             count++;
         }
         gidDisp[i + 1] = gidDisp[i] + count; // number of links for each local Sylinder
@@ -1819,16 +1833,16 @@ void SylinderSystem::collectBendLinkBilateral() {
                 // where vec is the vector part of a quaternion.
                 const Evec3 curvature = (equatI.conjugate() * equatJ).vec() - (equatI * equatJ.conjugate()).vec();
 
-                for (size_t i = 0; i < 3; i++)
+                for (size_t k = 0; k < 3; k++)
                 {
                     // The first constraint is given by kappa_1 - kappa_01 - lambda_1 / b_1 = 0
                     // This constraint is applied along the first director.
-                    const double delta0 = curvature[i] - runConfig.preferredCurvature[i];
+                    const double delta0 = curvature[k] - runConfig.preferredCurvature[k];
                     const Evec3 unscaledForceComI(0.0, 0.0, 0.0);
                     const Evec3 unscaledForceComJ(0.0, 0.0, 0.0);
-                    const Evec3 unscaledTorqueComI = -dirIJVec[i];
+                    const Evec3 unscaledTorqueComI = -dirIJVec[k];
                     const Evec3 unscaledTorqueComJ = -unscaledTorqueComI;
-                    const double gammaGuess = 0;
+                    const double gammaGuess = conCollectorPtr->fetchGuessFromStashedSolution(cgids[3 * j + k]);
                     ConstraintBlock conBlock(delta0, gammaGuess,        // current separation, initial guess of gamma
                                             syI.gid, syJ.gid,           //
                                             syI.globalIndex,            //
@@ -1858,11 +1872,15 @@ void SylinderSystem::collectTriBendLinkBilateral() {
 
     // fill the data to find
     auto &gidToFind = sylinderNearDataDirectoryPtr->gidToFind;
-    const auto &dataToFind = sylinderNearDataDirectoryPtr->dataToFind;
-
-    std::vector<int> gidDisp(nLocal + 1, 0);
     gidToFind.clear();
     gidToFind.reserve(nLocal);
+
+    //Constraint ids
+    std::vector<int> cgids;
+    cgids.clear();
+    cgids.reserve(3 * nLocal);
+
+    std::vector<int> gidDisp(nLocal + 1, 0);
 
     // loop over all sylinders
     // if tribendLinkMap[sy.gid] not empty, find info for all next
@@ -1871,11 +1889,12 @@ void SylinderSystem::collectTriBendLinkBilateral() {
         const auto& [rangeStart, rangeStop] = tribendLinkMap.equal_range(sy.gid);
         int count = 0;
         for (auto it = rangeStart; it != rangeStop; it++) {
-            const auto& [key, pair] = *it;
-            const auto& [gidJ, gidK] = pair;
+            const auto& [gidJ, gidK, cgid1, cgid2, cgid3] = it->second;
 
             gidToFind.push_back(gidJ); // left sphere
             gidToFind.push_back(gidK); // right sphere
+            cgids.insert(cgids.end(), {cgid1, cgid2, cgid3});
+
             count ++;
         }
         gidDisp[i + 1] = gidDisp[i] + count; // number of links for each local Sylinder
@@ -1954,10 +1973,10 @@ void SylinderSystem::collectTriBendLinkBilateral() {
                 // where vec is the vector part of a quaternion.
                 const Evec3 curvature = (equatI.conjugate() * equatJ).vec() - (equatI * equatJ.conjugate()).vec();
 
-                for (size_t i = 0; i < 3; i++)
+                for (size_t k = 0; k < 3; k++)
                 {
-                    const double delta0 = curvature[i] - runConfig.preferredCurvature[i];
-                    const Evec3 unscaledTorqueComBetweenJandI = -dirIJVec[i] ;
+                    const double delta0 = curvature[k] - runConfig.preferredCurvature[k];
+                    const Evec3 unscaledTorqueComBetweenJandI = -dirIJVec[k] ;
                     const Evec3 unscaledTorqueComBetweenIandK = -unscaledTorqueComBetweenJandI;
                     const Evec3 unscaledForceComJ = orientVecJI.cross(unscaledTorqueComBetweenJandI)/distJI;
                     const Evec3 unscaledForceComK = -orientVecIK.cross(unscaledTorqueComBetweenIandK)/distIK;
@@ -1966,7 +1985,7 @@ void SylinderSystem::collectTriBendLinkBilateral() {
                     const Evec3 unscaledTorqueComJ(0.0, 0.0, 0.0);
                     const Evec3 unscaledTorqueComK(0.0, 0.0, 0.0);
 
-                    const double gammaGuess = 0;
+                    const double gammaGuess = conCollectorPtr->fetchGuessFromStashedSolution(cgids[3 * j]);
                     ConstraintBlock conBlock(delta0, gammaGuess,        // current separation, initial guess of gamma
                                             syI.gid, syJ.gid, syK.gid,           //
                                             syI.globalIndex, syJ.globalIndex, syK.globalIndex,         //
