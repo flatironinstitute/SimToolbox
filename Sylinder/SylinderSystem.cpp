@@ -1781,9 +1781,12 @@ void SylinderSystem::collectBendLinkBilateral() {
                 // We have three bending constraints.
                 // They correspond to the satisfaction of kappa_i - kappa_0i - lambda_i / b_i along the triad of directors at the node connecting the two rods.
                 // In our case, the triad is uniquely described by the unit quaternion associated with each rod segment. To find the average quaternion at the center of the two nodes, we use slerp. 
-                const auto equatI = ECmapq(syI.orientation);
-                const auto equatJ = ECmapq(syJ.orientation);
+
+                const auto equatI = Equatn::FromTwoVectors(Evec3(0, 0, 1), directionI);
+                const auto equatJ = Equatn::FromTwoVectors(Evec3(0, 0, 1), directionJ);
                 const auto equatIJ = equatI.slerp(0.5, equatJ).normalized();
+                // const auto equatI = ECmapq(syI.orientation);
+                // const auto equatJ = ECmapq(syJ.orientation);
 
                 // The triad of directors is given by the following three unit vectors:
                 const std::vector<Evec3> dirIJVec = {equatIJ * Evec3(1, 0, 0), 
