@@ -1768,57 +1768,38 @@ void SylinderSystem::collectBendLinkBilateral() {
                         std::exit(1);
                     }
                 }
-                // sylinders are not treated as spheres for bilateral constraints
-                // constraint is always added between Pp and Qm
-                // constraint target length is radiusI + radiusJ + runConfig.linkGap
+                
                 const Evec3 directionI = ECmapq(syI.orientation) * Evec3(0, 0, 1);
-                const Evec3 Pp = centerI + directionI * (0.5 * syI.length); // plus end
+                const Evec3 Ploc = centerI + directionI * (0.5 * syI.length); // plus end
+
                 const Evec3 directionJ = ECmap3(syJ.direction);
-                const Evec3 Qm = centerJ - directionJ * (0.5 * syJ.length);
-                const Evec3 Ploc = Pp;
-                const Evec3 Qloc = Qm;
+                const Evec3 Qloc = centerJ - directionJ * (0.5 * syJ.length);
 
-                // We have three bending constraints.
-                // They correspond to the satisfaction of kappa_i - kappa_0i - lambda_i / b_i along the triad of directors at the node connecting the two rods.
-                // In our case, the triad is uniquely described by the unit quaternion associated with each rod segment. To find the average quaternion at the center of the two nodes, we use slerp. 
+                // Get direction of torque on I
+                const Evec3 IJ_cross = directionI.cross(directionJ);
+                const Evec3 IJ_cross_unit = IJ_cross.normalized();
+                const double IJ_cross_norm = IJ_cross.norm();
 
-                const auto equatI = Equatn::FromTwoVectors(Evec3(0, 0, 1), directionI);
-                const auto equatJ = Equatn::FromTwoVectors(Evec3(0, 0, 1), directionJ);
-                const auto equatIJ = equatI.slerp(0.5, equatJ).normalized();
-                // const auto equatI = ECmapq(syI.orientation);
-                // const auto equatJ = ECmapq(syJ.orientation);
 
-                // The triad of directors is given by the following three unit vectors:
-                const std::vector<Evec3> dirIJVec = {equatIJ * Evec3(1, 0, 0), 
-                                                     equatIJ * Evec3(0, 1, 0), 
-                                                     equatIJ * Evec3(0, 0, 1)};
-
-                // The curvature of the two rods is given by kappa = vec[equatI.conjugate() * equatJ - equatI * equatJ.conjugate()]
-                // where vec is the vector part of a quaternion.
-                const Evec3 curvature = (equatI.conjugate() * equatJ).vec() - (equatI * equatJ.conjugate()).vec();
-
-                for (size_t k = 0; k < 3; k++)
-                {
-                    // The first constraint is given by kappa_1 - kappa_01 - lambda_1 / b_1 = 0
-                    // This constraint is applied along the first director.
-                    const double delta0 = curvature[k] - runConfig.preferredCurvature[k];
-                    const Evec3 unscaledForceComI(0.0, 0.0, 0.0);
-                    const Evec3 unscaledForceComJ(0.0, 0.0, 0.0);
-                    const Evec3 unscaledTorqueComI = -dirIJVec[k];
-                    const Evec3 unscaledTorqueComJ = -unscaledTorqueComI;
-                    const double gammaGuess = 0;
-                    ConstraintBlock conBlock(delta0, gammaGuess,        // current separation, initial guess of gamma
-                                            syI.gid, syJ.gid,           //
-                                            syI.globalIndex,            //
-                                            syJ.globalIndex,            //
-                                            unscaledForceComI.data(), unscaledForceComJ.data(), // direction of collision force
-                                            unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
-                                            Ploc.data(), Qloc.data(), // location of collision in lab frame
-                                            false, true, runConfig.bendLinkKappa[k]);
-                    Emat3 stressIJ = Emat3::Zero();
-                    conBlock.setStress(stressIJ);
-                    conQue.push_back(conBlock);
-                }
+                const Evec3 unscaledTorqueComI = IJ_cross_unit.dot(directionI)*directionJ 
+                                                - directionI.dot(directionJ)*IJ_cross_unit;
+                const Evec3 unscaledTorqueComJ = directionI.dot(directionJ)*IJ_cross_unit 
+                                                - IJ_cross_unit.dot(directionJ)*directionI;
+                const double delta0 = IJ_cross_norm; 
+                const Evec3 unscaledForceComI(0.0, 0.0, 0.0);
+                const Evec3 unscaledForceComJ(0.0, 0.0, 0.0);
+                const double gammaGuess = 0;
+                ConstraintBlock conBlock(delta0, gammaGuess,        // deviation, initial guess of gamma
+                                        syI.gid, syJ.gid,           //
+                                        syI.globalIndex,            //
+                                        syJ.globalIndex,            //
+                                        unscaledForceComI.data(), unscaledForceComJ.data(), // direction of collision force
+                                        unscaledTorqueComI.data(), unscaledTorqueComJ.data(), // location of collision relative to particle center
+                                        Ploc.data(), Qloc.data(), // location of collision in lab frame
+                                        false, true, runConfig.bendLinkKappa[0]);
+                Emat3 stressIJ = Emat3::Zero();
+                conBlock.setStress(stressIJ);
+                conQue.push_back(conBlock);
             }
         }
     }
